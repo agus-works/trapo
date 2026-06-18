@@ -368,6 +368,20 @@ Trapo emits OpenTelemetry traces, logs, and metrics when an OTLP collector is
 reachable. See [docs/otel.md](docs/otel.md). Observability fails open: if the
 collector is unavailable, Trapo continues without exporting telemetry.
 
+The local Docker stack is unified in [docker-compose.yml](docker-compose.yml):
+
+```sh
+docker compose up -d
+uv run trapo init --db quack:localhost:9494
+uv run trapo ingest ./documents --db quack:localhost:9494
+uv run trapo serve --src ./documents --db quack:localhost:9494
+docker compose down
+```
+
+It starts Grafana LGTM and a DuckDB Quack server on `quack:localhost:9494`.
+Set `TRAPO_QUACK_TOKEN` to override the development token used by compose and
+the Trapo client.
+
 ## Quality Gates
 
 GitHub Actions runs the CI quality gates on every push and pull request. The

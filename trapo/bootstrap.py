@@ -6,7 +6,7 @@ from pathlib import Path
 import duckdb
 
 from trapo.config import RuntimeConfig
-from trapo.db import connect
+from trapo.db import connect, is_quack_uri
 from trapo.migrations import apply_migrations
 
 
@@ -21,6 +21,8 @@ def initialize_database(config: RuntimeConfig) -> DatabaseInitialization:
         with connect(config.db_path) as connection:
             messages = apply_migrations(connection, config)
     except duckdb.IOException:
+        if is_quack_uri(config.db_path):
+            raise
         db_path = Path(config.db_path)
         if not db_path.exists() or db_path.stat().st_size != 0:
             raise

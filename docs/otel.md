@@ -1,18 +1,21 @@
 # OpenTelemetry
 
 Trapo reports local traces, structured application logs, and basic metrics to
-the Grafana LGTM Docker image when the OTLP endpoint is reachable. The compose
-file is intended for local development and debugging, not production.
+the Grafana LGTM Docker image when the OTLP endpoint is reachable. The unified
+compose file also runs the local DuckDB Quack endpoint. It is intended for local
+development and debugging, not production.
 
 ## Start the Local Stack
 
 ```sh
-docker compose -f docker-compose.otel.yml up -d
+docker compose up -d
+uv run trapo init --db quack:localhost:9494
 ```
 
 Services:
 
 - Grafana: `http://localhost:3000`
+- DuckDB Quack: `quack:localhost:9494`
 - OTLP/HTTP: `http://localhost:4318`
 - OTLP/gRPC: `http://localhost:4317`
 - Tempo: `http://localhost:3200`
@@ -22,6 +25,23 @@ Services:
 
 Trapo defaults to `TRAPO_OTEL_ENDPOINT=http://localhost:4318`, so commands run
 from the host report to this stack when observability is enabled.
+
+The Quack service serves the repository-local `trapo.duckdb` file from inside
+the DuckDB container and uses `TRAPO_QUACK_TOKEN` for local authentication. When
+the environment variable is unset, compose and Trapo both use the development
+token `trapo-local-quack-token`.
+
+Use the shared DuckDB service from host commands by passing the Quack URI:
+
+```sh
+uv run trapo migrate --db quack:localhost:9494
+uv run trapo ingest ./documents --db quack:localhost:9494
+uv run trapo serve --src ./documents --db quack:localhost:9494
+```
+
+Quack is still beta in DuckDB 1.5.x. It is useful here because the ingest CLI
+and the API server become separate DuckDB clients attached to the same server
+process, so the web UI can query status and diagnostics while ingestion writes.
 
 ## What To Look At
 
@@ -47,13 +67,13 @@ there is a concrete performance investigation.
 ## Stop the Stack
 
 ```sh
-docker compose -f docker-compose.otel.yml down
+docker compose down
 ```
 
 Remove persisted local telemetry data:
 
 ```sh
-docker compose -f docker-compose.otel.yml down -v
+docker compose down -v
 ```
 
 ## Trapo Environment
@@ -66,6 +86,7 @@ TRAPO_OTEL_EXPORTER=otlp
 TRAPO_OTEL_ENDPOINT=http://localhost:4318
 TRAPO_OTEL_SERVICE_NAME=trapo
 TRAPO_OTEL_CONSOLE=false
+TRAPO_QUACK_TOKEN=trapo-local-quack-token
 ```
 
 Set `TRAPO_OTEL_ENABLED=false` to disable instrumentation. Observability fails

@@ -1,0 +1,65 @@
+services:
+  otel-lgtm:
+    image: grafana/otel-lgtm:latest
+    container_name: trapo-otel-lgtm
+    ports:
+      - "3000:3000"
+      - "3200:3200"
+      - "4040:4040"
+      - "4317:4317"
+      - "4318:4318"
+      - "9090:9090"
+    environment:
+      GF_PATHS_DATA: /data/grafana
+      CONTAINER_RUNTIME: docker
+    volumes:
+      - trapo-otel-grafana:/data/grafana
+      - trapo-otel-prometheus:/data/prometheus
+      - trapo-otel-loki:/data/loki
+      - trapo-otel-tempo:/data/tempo
+      - trapo-otel-pyroscope:/data/pyroscope
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  duckdb-quack:
+    image: duckdb/duckdb:1.5.4
+    container_name: trapo-duckdb-quack
+    ports:
+      - "9494:9494"
+    environment:
+      TRAPO_QUACK_TOKEN: ${TRAPO_QUACK_TOKEN:-trapo-local-quack-token}
+      TRAPO_DUCKDB_PATH: ${TRAPO_DUCKDB_PATH:-/workspace/trapo.duckdb}
+    volumes:
+      - .:/workspace
+    stdin_open: true
+    tty: true
+    command:
+      - duckdb
+      - -light-mode
+      - -cmd
+      - INSTALL quack; LOAD quack; INSTALL fts; LOAD fts; CALL quack_identify(name => 'trapo-duckdb', provider => 'docker', hostname => 'duckdb-quack', meta => '{"service":"trapo"}');
+      - -cmd
+      - CALL quack_serve('quack:0.0.0.0:9494', token = '${TRAPO_QUACK_TOKEN:-trapo-local-quack-token}', allow_other_hostname = true);
+      - ${TRAPO_DUCKDB_PATH:-/workspace/trapo.duckdb}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "duckdb",
+          "-c",
+          "INSTALL quack; LOAD quack; FROM quack_query('quack:localhost:9494', 'SELECT 1', token = '${TRAPO_QUACK_TOKEN:-trapo-local-quack-token}')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+volumes:
+  trapo-otel-grafana:
+  trapo-otel-prometheus:
+  trapo-otel-loki:
+  trapo-otel-tempo:
+  trapo-otel-pyroscope:

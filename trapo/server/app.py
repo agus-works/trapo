@@ -8,7 +8,6 @@ import mimetypes
 from pathlib import Path
 import threading
 
-import duckdb
 from fastapi import Depends, FastAPI, HTTPException, status as http_status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -30,7 +29,7 @@ from trapo.assets import (
 )
 from trapo.bootstrap import initialize_database
 from trapo.config import RuntimeConfig
-from trapo.db import DuckConnection, configure_connection, table_exists
+from trapo.db import DuckConnection, open_connection, table_exists
 from trapo.document_markdown import (
     BEST_AVAILABLE_MARKDOWN_ENGINE,
     MarkdownEngineStatus,
@@ -97,11 +96,10 @@ def create_app(
     runtime_id: str | None = None,
     source_root: str | None = None,
 ) -> FastAPI:
-    resolved_db_path = Path(db_path).resolve()
-    runtime_config = config or RuntimeConfig.from_env(db_path=str(resolved_db_path))
+    runtime_db_path = str(db_path)
+    runtime_config = config or RuntimeConfig.from_env(db_path=runtime_db_path)
     initialize_database(runtime_config)
-    db_connection = duckdb.connect(str(resolved_db_path))
-    configure_connection(db_connection)
+    db_connection = open_connection(runtime_config.db_path)
     db_lock = threading.RLock()
     effective_source_root = source_root or runtime_config.source_root
     enforced_source_root = (
@@ -120,7 +118,7 @@ def create_app(
     app = FastAPI(title="Trapo", version="0.1.0", lifespan=lifespan)
     instrument_fastapi_app(app, runtime_config)
     app.state.db_connection = db_connection
-    app.state.db_path = resolved_db_path
+    app.state.db_path = runtime_config.db_path
     app.state.db_lock = db_lock
 
     def connection() -> DuckConnection:
@@ -129,7 +127,7 @@ def create_app(
     @app.get("/api/health", response_model=HealthResponse)
     def health() -> HealthResponse:
         return HealthResponse(
-            db_path=str(resolved_db_path),
+            db_path=runtime_config.db_path,
             runtime_id=runtime_id,
             source_root=effective_source_root,
         )
@@ -139,7 +137,7 @@ def create_app(
         with db_lock:
             status = read_database_status(
                 db_connection,
-                resolved_db_path,
+                runtime_config.db_path,
                 runtime_id=runtime_id,
                 source_root=effective_source_root,
             )

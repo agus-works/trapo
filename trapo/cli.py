@@ -21,7 +21,7 @@ from trapo.config import (
     DEFAULT_SOURCE_ROOT,
     RuntimeConfig,
 )
-from trapo.db import connect, table_exists
+from trapo.db import connect, is_quack_uri, table_exists
 from trapo.ingest.lmstudio_models import (
     DEFAULT_LMSTUDIO_BASE_URL,
     DEFAULT_LMSTUDIO_CONTEXT_TOKENS,
@@ -1299,8 +1299,10 @@ def serve(
     except ValueError as exc:
         typer.echo(str(exc))
         raise typer.Exit(code=1) from exc
-    resolved_db_path = resolve_launch_path(db, launch_dir=launch_dir)
-    config = _config(str(resolved_db_path), source_root=str(resolved_source_root))
+    resolved_db_path = (
+        db if is_quack_uri(db) else str(resolve_launch_path(db, launch_dir=launch_dir))
+    )
+    config = _config(resolved_db_path, source_root=str(resolved_source_root))
     with traced_command(
         "serve",
         attributes=_command_attributes(
