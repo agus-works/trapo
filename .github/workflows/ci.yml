@@ -3,17 +3,18 @@ name: CI
 on:
   pull_request:
   push:
-    branches:
-      - main
 
 permissions:
   contents: read
 
 jobs:
   checks:
-    name: Lint, test, build, and Skylos
+    name: Quality gates
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Check out repository
@@ -36,51 +37,156 @@ jobs:
         with:
           bun-version: "1.3.14"
 
+      - name: Prepare log directory
+        run: mkdir -p .logs
+
       - name: Install Python dependencies
-        run: uv sync --no-sources --group dev --group qa
+        run: uv sync --no-sources --group dev
 
       - name: Check Python formatting
-        run: uv run --no-sync ruff format --check .
+        id: python_format
+        continue-on-error: true
+        run: set -o pipefail; uv run --no-sync ruff format --check . 2>&1 | tee .logs/ruff-format.log
 
       - name: Check Python types
-        run: uvx pyrefly check --summarize-errors
+        id: python_types
+        continue-on-error: true
+        run: set -o pipefail; uvx pyrefly check --summarize-errors 2>&1 | tee .logs/pyrefly.log
 
       - name: Check Python lint
-        run: uv run --no-sync ruff check .
+        id: python_lint
+        continue-on-error: true
+        run: set -o pipefail; uv run --no-sync ruff check . 2>&1 | tee .logs/ruff-check.log
 
       - name: Run Python tests
-        run: uv run --no-sync pytest
+        id: python_tests
+        continue-on-error: true
+        run: set -o pipefail; uv run --no-sync pytest 2>&1 | tee .logs/pytest.log
+
+      - name: Install SCC
+        run: go install github.com/boyter/scc/v3@v3.7.0
+
+      - name: Check source complexity and file size
+        id: scc_quality
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          scc --by-file --format json | tee .logs/scc-by-file.json
+          python - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          report = json.loads(Path(".logs/scc-by-file.json").read_text(encoding="utf-8"))
+          if isinstance(report, list):
+              files = [
+                  file
+                  for language in report
+                  for file in language.get("Files", [])
+              ]
+          else:
+              files = report.get("Files", [])
+          excluded = re.compile(r"(node_modules|dist|generated|\.json$|\.md$|trapo/migrations|tests/)")
+          violations = [
+              file
+              for file in files
+              if file.get("Lines", 0) > 300
+              and not excluded.search(file.get("Location", "").replace("\\", "/"))
+          ]
+          violations.sort(key=lambda file: file.get("Lines", 0), reverse=True)
+
+          with Path(".logs/scc-quality-summary.md").open("w", encoding="utf-8") as summary:
+              summary.write("### SCC quality gate\n\n")
+              summary.write("| File | Lines | Code | Complexity |\n")
+              summary.write("| --- | ---: | ---: | ---: |\n")
+              for file in violations:
+                  summary.write(
+                      f"| `{file.get('Location', '')}` | {file.get('Lines', 0)} | "
+                      f"{file.get('Code', 0)} | {file.get('Complexity', 0)} |\n"
+                  )
+              if not violations:
+                  summary.write("| No violations | 0 | 0 | 0 |\n")
+
+          if violations:
+              print(f"{len(violations)} file(s) exceed the 300-line quality gate.")
+          Path(".logs/scc-violation-count.txt").write_text(
+              str(len(violations)), encoding="utf-8"
+          )
+          PY
+          cat .logs/scc-quality-summary.md >> "$GITHUB_STEP_SUMMARY"
+          test "$(cat .logs/scc-violation-count.txt)" = "0"
 
       - name: Install frontend dependencies
         working-directory: web
         run: bun install --frozen-lockfile
 
       - name: Check frontend formatting
+        id: web_format
+        continue-on-error: true
         working-directory: web
-        run: bun run format:check
+        run: set -o pipefail; bun run format:check 2>&1 | tee ../.logs/web-format.log
 
       - name: Check frontend lint
+        id: web_lint
+        continue-on-error: true
         working-directory: web
-        run: bun run lint
+        run: set -o pipefail; bun run lint 2>&1 | tee ../.logs/web-lint.log
 
       - name: Check frontend types
+        id: web_types
+        continue-on-error: true
         working-directory: web
-        run: bun run typecheck:ci
+        run: set -o pipefail; bun run typecheck:ci 2>&1 | tee ../.logs/web-typecheck.log
 
       - name: Build frontend
+        id: web_build
+        continue-on-error: true
         working-directory: web
-        run: bun run build:ci
+        run: set -o pipefail; bun run build:ci 2>&1 | tee ../.logs/web-build.log
 
-      - name: Run Skylos report
-        run: uv run --no-sync trapo skylos-check
+      - name: Run Skylos quality gate
+        id: skylos_quality
+        continue-on-error: true
+        run: set -o pipefail; uv run --no-sync trapo skylos-check --strict 2>&1 | tee .logs/skylos-check.log
 
-      - name: Upload Skylos artifacts
+      - name: Write quality summary and enforce gates
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: skylos-report
-          path: |
-            .logs/skylos-report.json
-            .logs/skylos-report.sarif.json
-          if-no-files-found: warn
-          retention-days: 30
+        run: |
+          {
+            echo "## Quality gate summary"
+            echo
+            echo "| Gate | Outcome | Command |"
+            echo "| --- | --- | --- |"
+            echo "| Python format | ${{ steps.python_format.outcome }} | \`uv run --no-sync ruff format --check .\` |"
+            echo "| Python lint | ${{ steps.python_lint.outcome }} | \`uv run --no-sync ruff check .\` |"
+            echo "| Python types | ${{ steps.python_types.outcome }} | \`uvx pyrefly check --summarize-errors\` |"
+            echo "| Python tests | ${{ steps.python_tests.outcome }} | \`uv run --no-sync pytest\` |"
+            echo "| SCC file size | ${{ steps.scc_quality.outcome }} | \`scc --by-file --format json\` + 300-line policy check |"
+            echo "| Web format | ${{ steps.web_format.outcome }} | \`bun run format:check\` |"
+            echo "| Web lint | ${{ steps.web_lint.outcome }} | \`bun run lint\` |"
+            echo "| Web typecheck | ${{ steps.web_types.outcome }} | \`bun run typecheck:ci\` |"
+            echo "| Web build | ${{ steps.web_build.outcome }} | \`bun run build:ci\` |"
+            echo "| Skylos quality gate | ${{ steps.skylos_quality.outcome }} | \`uv run --no-sync trapo skylos-check --strict\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          failed=0
+          for outcome in \
+            "${{ steps.python_format.outcome }}" \
+            "${{ steps.python_lint.outcome }}" \
+            "${{ steps.python_types.outcome }}" \
+            "${{ steps.python_tests.outcome }}" \
+            "${{ steps.scc_quality.outcome }}" \
+            "${{ steps.web_format.outcome }}" \
+            "${{ steps.web_lint.outcome }}" \
+            "${{ steps.web_types.outcome }}" \
+            "${{ steps.web_build.outcome }}" \
+            "${{ steps.skylos_quality.outcome }}"; do
+            if [ "$outcome" != "success" ]; then
+              failed=1
+            fi
+          done
+
+          if [ "$failed" -ne 0 ]; then
+            echo "One or more quality gates failed. See the step logs and summary above."
+            exit 1
+          fi

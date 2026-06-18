@@ -368,6 +368,14 @@ Trapo emits OpenTelemetry traces, logs, and metrics when an OTLP collector is
 reachable. See [docs/otel.md](docs/otel.md). Observability fails open: if the
 collector is unavailable, Trapo continues without exporting telemetry.
 
+## Quality Gates
+
+GitHub Actions runs the CI quality gates on every push and pull request. The
+workflow checks Python formatting, linting, Pyrefly types, pytest, SCC file-size
+policy, Bun frontend formatting, linting, type checking, and production build,
+then runs the strict Skylos gate. The run writes a GitHub Actions step summary;
+it does not publish build artifacts or deploy anything.
+
 ## Documentation
 
 - [docs/schema.md](docs/schema.md) — DuckDB schema for ingest and search.

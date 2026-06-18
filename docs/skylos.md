@@ -1,30 +1,29 @@
 # Skylos checks
 
-Trapo uses [Skylos](https://skylos.dev) as an optional QA dependency for
-local-first dead-code, security, secrets, quality, and dependency checks. The
-project wrapper is report-only by default so teams can triage findings before
-turning it into an enforcing gate.
+Trapo uses [Skylos](https://skylos.dev) as a required project dependency for
+local-first dead-code, security, secrets, quality, and dependency checks. CI
+runs Skylos as a strict quality gate after the Python, SCC, and Bun gates.
 
 ## Install
 
-Install the QA dependency group:
+Install the normal project dependencies:
 
 ```powershell
-uv sync --group qa
+uv sync
 ```
 
 To test against the sibling Skylos checkout during local development:
 
 ```powershell
-uv run --group qa --with-editable ..\skylos trapo skylos-check
+uv run --with-editable ..\skylos trapo skylos-check --strict
 ```
 
 ## Run
 
-Run the comprehensive report-only scan:
+Run the comprehensive strict scan:
 
 ```powershell
-uv run --group qa trapo skylos-check 2>&1 | tee .\.logs\skylos-check.log
+uv run trapo skylos-check --strict 2>&1 | tee .\.logs\skylos-strict.log
 ```
 
 The wrapper writes:
@@ -32,18 +31,11 @@ The wrapper writes:
 - `.logs/skylos-report.json` for machine-readable findings.
 - `.logs/skylos-report.sarif.json` for code-scanning tools.
 
-Use `--strict` when the current exceptions ledger is clean enough to block on
-new findings:
-
-```powershell
-uv run --group qa trapo skylos-check --strict 2>&1 | tee .\.logs\skylos-strict.log
-```
-
 Use `--no-sca` only when the network-backed dependency vulnerability scan is not
 available:
 
 ```powershell
-uv run --group qa trapo skylos-check --no-sca
+uv run trapo skylos-check --strict --no-sca
 ```
 
 ## Public-source readiness
@@ -61,7 +53,7 @@ bun run lint 2>&1 | tee ..\.logs\web-lint.log
 bun run typecheck 2>&1 | tee ..\.logs\web-typecheck.log
 bun run build 2>&1 | tee ..\.logs\web-build.log
 Pop-Location
-uv run --group qa trapo skylos-check 2>&1 | tee .\.logs\skylos-check.log
+uv run trapo skylos-check --strict 2>&1 | tee .\.logs\skylos-strict.log
 ```
 
 Fix true findings. Record accepted false positives, intentional dynamic entry
@@ -69,10 +61,16 @@ points, or deferred risks in [EXCEPTIONS.md](../EXCEPTIONS.md). Each exception
 must include the rule or category, the file, the reason, and the next review
 trigger.
 
-The current CI workflow runs Skylos in report-only mode. Treat
-[EXCEPTIONS.md](../EXCEPTIONS.md) as the baseline ledger: new true security,
-secrets, dependency, or dead-code findings should be fixed before merge, and the
-baseline should shrink as quality cleanup lands.
+The CI workflow runs on every push and pull request. It checks Python format,
+lint, types, tests, SCC file-size policy, frontend format, frontend lint,
+frontend types, frontend build, and the strict Skylos gate. Gate steps continue
+after failures so the build summary shows every result; the final aggregation
+step fails the job when any required gate fails. The workflow writes a GitHub
+Actions step summary instead of uploading artifacts.
+
+Treat [EXCEPTIONS.md](../EXCEPTIONS.md) as the baseline ledger: new true
+security, secrets, dependency, or dead-code findings should be fixed before
+merge, and the baseline should shrink as quality cleanup lands.
 
 ## Configuration
 
