@@ -3698,6 +3698,7 @@ dev = [
     { name = "httpx" },
     { name = "pytest" },
     { name = "ruff" },
+    { name = "skylos" },
 ]
 
 [package.metadata]
@@ -3742,6 +3743,7 @@ dev = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "ruff", specifier = ">=0.15.16" },
+    { name = "skylos", specifier = ">=4.24.2" },
 ]
 
 [[package]]

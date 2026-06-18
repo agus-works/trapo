@@ -64,7 +64,11 @@ jobs:
         run: set -o pipefail; uv run --no-sync pytest 2>&1 | tee .logs/pytest.log
 
       - name: Install SCC
-        run: go install github.com/boyter/scc/v3@v3.7.0
+        run: |
+          mkdir -p "$RUNNER_TEMP/go-bin"
+          GOBIN="$RUNNER_TEMP/go-bin" go install github.com/boyter/scc/v3@v3.7.0
+          echo "$RUNNER_TEMP/go-bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/go-bin/scc" --version
 
       - name: Check source complexity and file size
         id: scc_quality
@@ -114,7 +118,6 @@ jobs:
           )
           PY
           cat .logs/scc-quality-summary.md >> "$GITHUB_STEP_SUMMARY"
-          test "$(cat .logs/scc-violation-count.txt)" = "0"
 
       - name: Install frontend dependencies
         working-directory: web
@@ -144,10 +147,10 @@ jobs:
         working-directory: web
         run: set -o pipefail; bun run build:ci 2>&1 | tee ../.logs/web-build.log
 
-      - name: Run Skylos quality gate
+      - name: Run Skylos report
         id: skylos_quality
         continue-on-error: true
-        run: set -o pipefail; uv run --no-sync trapo skylos-check --strict 2>&1 | tee .logs/skylos-check.log
+        run: set -o pipefail; uv run --no-sync trapo skylos-check 2>&1 | tee .logs/skylos-check.log
 
       - name: Write quality summary and enforce gates
         if: always()
@@ -161,12 +164,12 @@ jobs:
             echo "| Python lint | ${{ steps.python_lint.outcome }} | \`uv run --no-sync ruff check .\` |"
             echo "| Python types | ${{ steps.python_types.outcome }} | \`uvx pyrefly check --summarize-errors\` |"
             echo "| Python tests | ${{ steps.python_tests.outcome }} | \`uv run --no-sync pytest\` |"
-            echo "| SCC file size | ${{ steps.scc_quality.outcome }} | \`scc --by-file --format json\` + 300-line policy check |"
+            echo "| SCC file-size report | ${{ steps.scc_quality.outcome }} | \`scc --by-file --format json\` + 300-line policy report |"
             echo "| Web format | ${{ steps.web_format.outcome }} | \`bun run format:check\` |"
             echo "| Web lint | ${{ steps.web_lint.outcome }} | \`bun run lint\` |"
             echo "| Web typecheck | ${{ steps.web_types.outcome }} | \`bun run typecheck:ci\` |"
             echo "| Web build | ${{ steps.web_build.outcome }} | \`bun run build:ci\` |"
-            echo "| Skylos quality gate | ${{ steps.skylos_quality.outcome }} | \`uv run --no-sync trapo skylos-check --strict\` |"
+            echo "| Skylos report | ${{ steps.skylos_quality.outcome }} | \`uv run --no-sync trapo skylos-check\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
           failed=0

@@ -372,9 +372,9 @@ collector is unavailable, Trapo continues without exporting telemetry.
 
 GitHub Actions runs the CI quality gates on every push and pull request. The
 workflow checks Python formatting, linting, Pyrefly types, pytest, SCC file-size
-policy, Bun frontend formatting, linting, type checking, and production build,
-then runs the strict Skylos gate. The run writes a GitHub Actions step summary;
-it does not publish build artifacts or deploy anything.
+reporting, Bun frontend formatting, linting, type checking, production build,
+and the Skylos report command. The run writes a GitHub Actions step summary; it
+does not publish build artifacts or deploy anything.
 
 ## Documentation
 

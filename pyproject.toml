@@ -53,6 +53,7 @@ dev = [
     "httpx>=0.28.1",
     "pytest>=9.0.2",
     "ruff>=0.15.16",
+    "skylos>=4.24.2",
 ]
 
 # PyTorch on Windows publishes CPU-only wheels to PyPI, which forces Docling
