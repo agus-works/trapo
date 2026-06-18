@@ -218,8 +218,8 @@ def test_skylos_check_cli_runs_report_only_by_default(monkeypatch, tmp_path) -> 
     assert options.include_sca is True
 
 
-def test_annotation_engines_all_includes_lmstudio() -> None:
-    assert _requested_engines("all") == ["docling", "mineru", "lmstudio"]
+def test_annotation_engines_all_includes_lmstudio_and_infinity() -> None:
+    assert _requested_engines("all") == ["docling", "mineru", "lmstudio", "infinity"]
     assert _requested_engines("lm-studio,local-docling") == ["lmstudio", "docling"]
 
 

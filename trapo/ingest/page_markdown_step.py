@@ -7,13 +7,20 @@ from typing import Any
 
 from trapo.db import DuckConnection
 from trapo.document_markdown import (
+    INFINITY_MARKDOWN_ENGINE,
     LMSTUDIO_MARKDOWN_ENGINE,
     MarkdownGeneratorRecord,
     PageMarkdown,
+    is_usable_markdown_text,
     markdown_complete,
     record_markdown_generator,
     upsert_page_markdown,
 )
+from trapo.ingest.infinity_models import (
+    INFINITY_PROVIDER,
+    InfinityOptions,
+)
+from trapo.ingest.infinity_reader import read_page_markdown_with_infinity
 from trapo.ingest.lmstudio_context import LmStudioContextInfo
 from trapo.ingest.lmstudio_context import resolve_markdown_max_tokens
 from trapo.ingest.lmstudio_models import LmStudioMarkdownOptions
@@ -24,6 +31,10 @@ from trapo.ingest.markitdown_markdown import (
     process_markitdown_markdown,
 )
 from trapo.ingest.options import IngestOptions
+from trapo.ingest.page_markdown_images import (
+    MarkdownRenderOptions,
+    iter_markdown_page_images,
+)
 from trapo.ingest.target_pages import (
     image_rotation_degrees_by_page,
     target_pages_for_regions,
@@ -122,7 +133,7 @@ def _process_markdown_engine(  # noqa: PLR0913
     return summary
 
 
-def _generate_markdown_engine(  # noqa: PLR0913
+def _generate_markdown_engine(  # noqa: PLR0911, PLR0913
     connection: DuckConnection,
     path: Path,
     file_hash: str,
@@ -161,6 +172,36 @@ def _generate_markdown_engine(  # noqa: PLR0913
                         "expected_pages": expected_pages,
                         "error_count": error_count,
                         "errors": markdown_summary.errors or [],
+                    },
+                ),
+            )
+            return markdown_summary
+        if markdown_engine == INFINITY_MARKDOWN_ENGINE:
+            markdown_summary = _process_infinity_markdown(
+                connection,
+                path,
+                file_hash,
+                options,
+                log,
+            )
+            error_count = markdown_summary.error_count
+            record_markdown_generator(
+                connection,
+                MarkdownGeneratorRecord(
+                    file_hash=file_hash,
+                    ingest_run_id=run_id,
+                    markdown_engine=markdown_engine,
+                    markdown_provider=INFINITY_PROVIDER,
+                    markdown_model=options.infinity_model,
+                    status="ok" if error_count == 0 else "partial",
+                    page_count=markdown_summary.page_count,
+                    error=f"{error_count} page(s) failed" if error_count else None,
+                    metadata={
+                        "expected_pages": expected_pages,
+                        "error_count": error_count,
+                        "errors": markdown_summary.errors or [],
+                        "backend": options.infinity_backend,
+                        "batch_size": options.infinity_batch_size,
                     },
                 ),
             )
@@ -229,6 +270,114 @@ def _generate_markitdown_engine(  # noqa: PLR0913
         ),
     )
     return PageMarkdownSummary(page_count=page_count)
+
+
+def _process_infinity_markdown(  # noqa: PLR0913
+    connection: DuckConnection,
+    path: Path,
+    file_hash: str,
+    options: IngestOptions,
+    log: Callable[[str], None],
+) -> PageMarkdownSummary:
+    log(
+        "Generating page Markdown with Infinity Parser2: "
+        f"{path} model={options.infinity_model} backend={options.infinity_backend}"
+    )
+    render_options = MarkdownRenderOptions(
+        file_hash=file_hash,
+        render_dpi=options.page_markdown_render_dpi,
+        image_max_side=options.page_markdown_image_max_side,
+        image_format=options.page_markdown_image_format,
+        jpeg_quality=options.page_markdown_jpeg_quality,
+        cache_enabled=True,
+        cache_root=options.page_markdown_cache_root,
+        image_rotation_degrees_by_page=image_rotation_degrees_by_page(
+            target_pages_for_regions(connection, path, file_hash) or []
+        ),
+    )
+    infinity_options = InfinityOptions(
+        model=options.infinity_model,
+        backend=options.infinity_backend,
+        batch_size=options.infinity_batch_size,
+        device=options.infinity_device,
+        torch_dtype=options.infinity_torch_dtype,
+    )
+    with traced_span(
+        "trapo.ingest.page_markdown",
+        attributes={
+            "file.hash": file_hash,
+            "markdown.engine": INFINITY_MARKDOWN_ENGINE,
+            "infinity.model": options.infinity_model,
+            "infinity.backend": options.infinity_backend,
+            "markdown.render_dpi": options.page_markdown_render_dpi,
+            "markdown.image_max_side": options.page_markdown_image_max_side,
+        },
+    ) as markdown_span:
+        page_images = list(iter_markdown_page_images(path, options=render_options, log=log))
+        outputs = read_page_markdown_with_infinity(
+            page_images,
+            source_path=path,
+            options=infinity_options,
+            log=log,
+        )
+        pages: list[PageMarkdown] = []
+        errors: list[dict[str, Any]] = []
+        for output in outputs:
+            if output.get("status") == "error":
+                errors.append(_infinity_page_error(output))
+                continue
+            markdown_text = _infinity_markdown_text(output.get("result"))
+            if not is_usable_markdown_text(markdown_text):
+                errors.append(
+                    {
+                        "page_no": output.get("page_no"),
+                        "render_sha256": output.get("render_sha256"),
+                        "error_type": "UnusableMarkdown",
+                        "error": "Infinity Parser2 returned unusable page Markdown.",
+                    }
+                )
+                continue
+            page = PageMarkdown(
+                file_hash=file_hash,
+                page_no=int(output["page_no"]),
+                markdown_engine=INFINITY_MARKDOWN_ENGINE,
+                markdown_provider=INFINITY_PROVIDER,
+                markdown_model=options.infinity_model,
+                markdown_text=markdown_text,
+                page_width=_float_or_none(output.get("width")),
+                page_height=_float_or_none(output.get("height")),
+                render_sha256=str(output.get("render_sha256") or ""),
+                metadata={
+                    "source": "infinity_parser2_page_markdown",
+                    "model": options.infinity_model,
+                    "backend": options.infinity_backend,
+                    "render_width": output.get("render_width"),
+                    "render_height": output.get("render_height"),
+                    "render_mime_type": output.get("render_mime_type"),
+                    "elapsed_seconds": output.get("elapsed_seconds"),
+                    "raw_result": output.get("result"),
+                    "render_cache": output.get("render_cache"),
+                    "cache_forced": not options.page_markdown_cache,
+                },
+            )
+            upsert_page_markdown(connection, page)
+            pages.append(page)
+        span_set_attributes(
+            markdown_span,
+            {
+                "markdown.page_count": len(pages),
+                "markdown.error_count": len(errors),
+            },
+        )
+    log(
+        "Stored Infinity Parser2 page Markdown: "
+        f"pages={len(pages)} page_errors={len(errors)}"
+    )
+    return PageMarkdownSummary(
+        page_count=len(pages),
+        error_count=len(errors),
+        errors=errors or None,
+    )
 
 
 def _process_lmstudio_markdown(  # noqa: PLR0913
@@ -346,4 +495,38 @@ def pending_page_markdown(  # noqa: PLR0913
 def _markdown_identity(markdown_engine: str, options: IngestOptions) -> tuple[str, str]:
     if markdown_engine == LMSTUDIO_MARKDOWN_ENGINE:
         return "local-lmstudio", options.lmstudio_model
+    if markdown_engine == INFINITY_MARKDOWN_ENGINE:
+        return INFINITY_PROVIDER, options.infinity_model
     return markitdown_identity(markdown_engine)
+
+
+def _infinity_markdown_text(value: object) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, dict):
+        for key in ("markdown", "text", "content"):
+            child = value.get(key)
+            if isinstance(child, str) and child.strip():
+                return child.strip()
+    return str(value or "").strip()
+
+
+def _infinity_page_error(output: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "page_no": output.get("page_no"),
+        "render_sha256": output.get("render_sha256"),
+        "error_type": output.get("error_type") or "InfinityParserError",
+        "error": output.get("error") or "Infinity Parser2 page failed.",
+    }
+
+
+def _float_or_none(value: object) -> float | None:
+    result: float | None = None
+    if isinstance(value, int | float):
+        result = float(value)
+    elif isinstance(value, str):
+        try:
+            result = float(value)
+        except ValueError:
+            result = None
+    return result

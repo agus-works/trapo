@@ -30,6 +30,13 @@ from trapo.ingest.lmstudio_models import (
     DEFAULT_LMSTUDIO_ORIENTATION_MIN_CONFIDENCE,
     DEFAULT_LMSTUDIO_TIMEOUT_SECONDS,
 )
+from trapo.ingest.infinity_models import (
+    DEFAULT_INFINITY_BACKEND,
+    DEFAULT_INFINITY_BATCH_SIZE,
+    DEFAULT_INFINITY_DEVICE,
+    DEFAULT_INFINITY_MODEL,
+    DEFAULT_INFINITY_TORCH_DTYPE,
+)
 from trapo.ingest.lmstudio_profiles import DEFAULT_LMSTUDIO_PROFILE
 from trapo.ingest.lmstudio_smoke import (
     SMOKE_RENDER_MAX_SIDE,
@@ -96,6 +103,11 @@ class IngestCommandOptions:
     mineru_parse_method: str
     mineru_language: str
     mineru_processing_window_size: int
+    infinity_model: str
+    infinity_backend: str
+    infinity_batch_size: int
+    infinity_device: str
+    infinity_torch_dtype: str
     lmstudio_base_url: str
     lmstudio_model: str
     lmstudio_timeout_seconds: float
@@ -502,7 +514,7 @@ def ingest(  # noqa: PLR0913
         str,
         typer.Option(
             "--annotation-engines",
-            help="Comma-separated annotation engines: docling, mineru, lmstudio, or all.",
+            help="Comma-separated annotation engines: docling, mineru, lmstudio, infinity, or all.",
         ),
     ] = "docling,mineru",
     mineru_backend: Annotated[
@@ -524,6 +536,35 @@ def ingest(  # noqa: PLR0913
             help="MinerU processing window size. Lower values reduce memory use.",
         ),
     ] = DEFAULT_MINERU_PROCESSING_WINDOW_SIZE,
+    infinity_model: Annotated[
+        str,
+        typer.Option("--infinity-model", help="Infinity Parser2 model identifier."),
+    ] = DEFAULT_INFINITY_MODEL,
+    infinity_backend: Annotated[
+        str,
+        typer.Option(
+            "--infinity-backend",
+            help="Infinity Parser2 backend, for example vllm-engine or transformers.",
+        ),
+    ] = DEFAULT_INFINITY_BACKEND,
+    infinity_batch_size: Annotated[
+        int,
+        typer.Option("--infinity-batch-size", help="Infinity Parser2 parse batch size."),
+    ] = DEFAULT_INFINITY_BATCH_SIZE,
+    infinity_device: Annotated[
+        str,
+        typer.Option(
+            "--infinity-device",
+            help="Infinity Parser2 transformers backend device, for example cuda.",
+        ),
+    ] = DEFAULT_INFINITY_DEVICE,
+    infinity_torch_dtype: Annotated[
+        str,
+        typer.Option(
+            "--infinity-torch-dtype",
+            help="Infinity Parser2 transformers backend torch dtype.",
+        ),
+    ] = DEFAULT_INFINITY_TORCH_DTYPE,
     lmstudio_base_url: Annotated[
         str,
         typer.Option(
@@ -625,7 +666,7 @@ def ingest(  # noqa: PLR0913
         str,
         typer.Option(
             "--page-markdown-engines",
-            help="Comma-separated Markdown generators: lmstudio_markdown, markitdown, markitdown_cu, or all.",
+            help="Comma-separated Markdown generators: lmstudio_markdown, markitdown, markitdown_cu, infinity_markdown, or all.",
         ),
     ] = "markitdown",
     page_markdown_render_dpi: Annotated[
@@ -755,6 +796,11 @@ def ingest(  # noqa: PLR0913
             mineru_parse_method=mineru_parse_method,
             mineru_language=mineru_language,
             mineru_processing_window_size=mineru_processing_window_size,
+            infinity_model=infinity_model,
+            infinity_backend=infinity_backend,
+            infinity_batch_size=infinity_batch_size,
+            infinity_device=infinity_device,
+            infinity_torch_dtype=infinity_torch_dtype,
             lmstudio_base_url=lmstudio_base_url,
             lmstudio_model=lmstudio_model,
             lmstudio_timeout_seconds=lmstudio_timeout_seconds,
@@ -879,7 +925,7 @@ def pipeline_read(  # noqa: PLR0913
         str,
         typer.Option(
             "--annotation-engines",
-            help="Comma-separated annotation engines: docling, mineru, lmstudio, or all.",
+            help="Comma-separated annotation engines: docling, mineru, lmstudio, infinity, or all.",
         ),
     ] = "docling,mineru",
     mineru_backend: Annotated[
@@ -901,6 +947,35 @@ def pipeline_read(  # noqa: PLR0913
             help="MinerU processing window size. Lower values reduce memory use.",
         ),
     ] = DEFAULT_MINERU_PROCESSING_WINDOW_SIZE,
+    infinity_model: Annotated[
+        str,
+        typer.Option("--infinity-model", help="Infinity Parser2 model identifier."),
+    ] = DEFAULT_INFINITY_MODEL,
+    infinity_backend: Annotated[
+        str,
+        typer.Option(
+            "--infinity-backend",
+            help="Infinity Parser2 backend, for example vllm-engine or transformers.",
+        ),
+    ] = DEFAULT_INFINITY_BACKEND,
+    infinity_batch_size: Annotated[
+        int,
+        typer.Option("--infinity-batch-size", help="Infinity Parser2 parse batch size."),
+    ] = DEFAULT_INFINITY_BATCH_SIZE,
+    infinity_device: Annotated[
+        str,
+        typer.Option(
+            "--infinity-device",
+            help="Infinity Parser2 transformers backend device, for example cuda.",
+        ),
+    ] = DEFAULT_INFINITY_DEVICE,
+    infinity_torch_dtype: Annotated[
+        str,
+        typer.Option(
+            "--infinity-torch-dtype",
+            help="Infinity Parser2 transformers backend torch dtype.",
+        ),
+    ] = DEFAULT_INFINITY_TORCH_DTYPE,
     lmstudio_base_url: Annotated[
         str,
         typer.Option(
@@ -1002,7 +1077,7 @@ def pipeline_read(  # noqa: PLR0913
         str,
         typer.Option(
             "--page-markdown-engines",
-            help="Comma-separated Markdown generators: lmstudio_markdown, markitdown, markitdown_cu, or all.",
+            help="Comma-separated Markdown generators: lmstudio_markdown, markitdown, markitdown_cu, infinity_markdown, or all.",
         ),
     ] = "markitdown",
     page_markdown_render_dpi: Annotated[
@@ -1127,6 +1202,11 @@ def pipeline_read(  # noqa: PLR0913
             mineru_parse_method=mineru_parse_method,
             mineru_language=mineru_language,
             mineru_processing_window_size=mineru_processing_window_size,
+            infinity_model=infinity_model,
+            infinity_backend=infinity_backend,
+            infinity_batch_size=infinity_batch_size,
+            infinity_device=infinity_device,
+            infinity_torch_dtype=infinity_torch_dtype,
             lmstudio_base_url=lmstudio_base_url,
             lmstudio_model=lmstudio_model,
             lmstudio_timeout_seconds=lmstudio_timeout_seconds,
@@ -1186,6 +1266,9 @@ def _run_ingest(
             mineru_backend=command_options.mineru_backend,
             mineru_parse_method=command_options.mineru_parse_method,
             mineru_processing_window_size=command_options.mineru_processing_window_size,
+            infinity_model=command_options.infinity_model,
+            infinity_backend=command_options.infinity_backend,
+            infinity_batch_size=command_options.infinity_batch_size,
             lmstudio_model=command_options.lmstudio_model,
             lmstudio_base_url=command_options.lmstudio_base_url,
             lmstudio_box_origin=command_options.lmstudio_box_origin,
@@ -1225,6 +1308,11 @@ def _run_ingest(
             mineru_parse_method=command_options.mineru_parse_method,
             mineru_language=command_options.mineru_language,
             mineru_processing_window_size=command_options.mineru_processing_window_size,
+            infinity_model=command_options.infinity_model,
+            infinity_backend=command_options.infinity_backend,
+            infinity_batch_size=command_options.infinity_batch_size,
+            infinity_device=command_options.infinity_device,
+            infinity_torch_dtype=command_options.infinity_torch_dtype,
             lmstudio_base_url=command_options.lmstudio_base_url,
             lmstudio_model=command_options.lmstudio_model,
             lmstudio_timeout_seconds=command_options.lmstudio_timeout_seconds,

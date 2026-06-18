@@ -319,7 +319,9 @@ def region_kind(value: str) -> str:
 
 
 def engine_priority(annotation_engine: str) -> int:
-    return {"docling": 0, "mineru": 1, "lmstudio": 2}.get(annotation_engine, 9)
+    return {"docling": 0, "mineru": 1, "lmstudio": 2, "infinity": 3}.get(
+        annotation_engine, 9
+    )
 
 
 def engine_weight(annotation_engine: str, profile: FusionProfile) -> float:

@@ -193,7 +193,8 @@ def _stored_markdown_pages(
     *,
     page_no: int | None = None,
 ) -> list[PageMarkdown]:
-    filters = ["file_hash = ?", "markdown_engine IN (?, ?, ?)"]
+    engine_placeholders = ", ".join("?" for _engine in MARKDOWN_ENGINE_PRIORITY)
+    filters = ["file_hash = ?", f"markdown_engine IN ({engine_placeholders})"]
     parameters: list[object] = [file_hash, *MARKDOWN_ENGINE_PRIORITY]
     if page_no is not None:
         filters.append("page_no = ?")

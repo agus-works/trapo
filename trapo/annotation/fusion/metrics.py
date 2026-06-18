@@ -3,7 +3,12 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
-from trapo.annotation.fusion.models import SOURCE_ENGINES, FusedRegion, FusionCandidate
+from trapo.annotation.fusion.models import (
+    CORE_SOURCE_ENGINES,
+    SOURCE_ENGINES,
+    FusedRegion,
+    FusionCandidate,
+)
 
 
 def fusion_agreement_summary(
@@ -32,7 +37,7 @@ def fusion_agreement_summary(
         "all_source_engines_region_count": sum(
             1
             for region in fused_regions
-            if SOURCE_ENGINES.issubset(fused_region_engines(region))
+            if CORE_SOURCE_ENGINES.issubset(fused_region_engines(region))
         ),
     }
 
@@ -51,13 +56,16 @@ def fused_region_engines(region: FusedRegion) -> set[str]:
 def agreement_level(source_engines: set[str]) -> str:
     if len(source_engines) <= 1:
         return "single_engine"
-    if SOURCE_ENGINES.issubset(source_engines):
+    if CORE_SOURCE_ENGINES.issubset(source_engines):
         return "all_source_engines"
     return "multi_engine"
 
 
 def _known_engine_counts(counter: Counter[str]) -> dict[str, int]:
-    return {engine: int(counter.get(engine, 0)) for engine in sorted(SOURCE_ENGINES)}
+    engines = CORE_SOURCE_ENGINES | {
+        engine for engine in SOURCE_ENGINES if counter.get(engine, 0) > 0
+    }
+    return {engine: int(counter.get(engine, 0)) for engine in sorted(engines)}
 
 
 def _page_counts(items: list[FusionCandidate] | list[FusedRegion]) -> dict[str, int]:

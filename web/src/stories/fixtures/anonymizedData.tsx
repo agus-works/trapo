@@ -79,6 +79,14 @@ export const markdownEngines: MarkdownEngineRecord[] = [
     status: 'error',
   },
   {
+    label: 'Infinity Parser2',
+    markdown_engine: 'infinity_markdown',
+    markdown_model: 'infly/Infinity-Parser2-Flash',
+    markdown_provider: 'local-infinity-parser2',
+    page_count: 12,
+    status: 'ok',
+  },
+  {
     label: 'MarkItDown',
     markdown_engine: 'markitdown',
     markdown_model: 'markitdown-ocr',

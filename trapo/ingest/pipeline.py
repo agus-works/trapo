@@ -18,9 +18,11 @@ from trapo.ingest.engine_steps import (
     lmstudio_profile_engines,
     pending_fusion_profiles,
     process_fusion,
+    process_infinity,
     process_lmstudio_profiles,
     process_mineru,
 )
+from trapo.ingest.infinity_models import INFINITY_ENGINE
 from trapo.ingest.lmstudio_context import (
     LmStudioContextInfo,
     ensure_lmstudio_max_context,
@@ -298,6 +300,29 @@ def ingest_directory(  # noqa: PLR0912
                             exc=exc,
                         )
                         log(f"MinerU failed for {path}: {exc}")
+                if INFINITY_ENGINE in pending_engines:
+                    try:
+                        infinity_regions = process_infinity(
+                            connection,
+                            path,
+                            file_hash,
+                            run_id,
+                            options,
+                            log,
+                        )
+                        file_region_count += infinity_regions
+                    except Exception as exc:
+                        file_engine_errors += 1
+                        record_ocr_error(
+                            connection,
+                            file_hash,
+                            run_id,
+                            annotation_engine=INFINITY_ENGINE,
+                            reader_provider="local-infinity-parser2",
+                            reader_model=options.infinity_model,
+                            exc=exc,
+                        )
+                        log(f"Infinity Parser2 failed for {path}: {exc}")
                 if MINERU_NORMALIZED_ENGINE in pending_engines:
                     try:
                         mineru_normalized_regions = process_mineru_normalized(
@@ -608,8 +633,8 @@ def _lmstudio_context_preflight(
 def _uses_lmstudio(options: IngestOptions) -> bool:
     markdown_engines = requested_markdown_engines(options)
     return (
-        "lmstudio" in _requested_engines(options.annotation_engines)
-        or "lmstudio_markdown" in markdown_engines
+            "lmstudio" in _requested_engines(options.annotation_engines)
+            or "lmstudio_markdown" in markdown_engines
         or (options.markitdown_lmstudio_ocr and "markitdown" in markdown_engines)
     )
 
@@ -690,6 +715,7 @@ def _supported_engines(path: Path, options: IngestOptions) -> list[str]:
             "docling",
             "mineru",
             "lmstudio",
+            INFINITY_ENGINE,
             DOCLING_NORMALIZED_ENGINE,
             MINERU_NORMALIZED_ENGINE,
         }
@@ -729,8 +755,14 @@ def _requested_engines(value: str) -> list[str]:
             if normalized in {"lmstudio", "lm-studio", "local-lmstudio"}
             else normalized
         )
+        normalized = (
+            INFINITY_ENGINE
+            if normalized
+            in {"infinity", "infinity-parser2", "local-infinity", "local-infinity-parser2"}
+            else normalized
+        )
         if normalized == "all":
-            for default_engine in ("docling", "mineru", "lmstudio"):
+            for default_engine in ("docling", "mineru", "lmstudio", INFINITY_ENGINE):
                 if default_engine not in engines:
                     engines.append(default_engine)
             continue
@@ -748,6 +780,7 @@ def _requested_engines(value: str) -> list[str]:
                 "docling",
                 "mineru",
                 "lmstudio",
+                INFINITY_ENGINE,
                 DOCLING_NORMALIZED_ENGINE,
                 MINERU_NORMALIZED_ENGINE,
             }

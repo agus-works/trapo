@@ -43,7 +43,12 @@ FUSION_PROFILES = {
         merge_coverage_threshold=0.82,
         consensus_iou_threshold=0.35,
         consensus_area_ratio=2.0,
-        engine_weights={"docling": 1.0, "mineru": 1.0, "lmstudio": 0.5},
+        engine_weights={
+            "docling": 1.0,
+            "mineru": 1.0,
+            "lmstudio": 0.5,
+            "infinity": 0.5,
+        },
     ),
     "balanced": FusionProfile(
         name="balanced",
@@ -51,7 +56,12 @@ FUSION_PROFILES = {
         merge_coverage_threshold=0.72,
         consensus_iou_threshold=0.25,
         consensus_area_ratio=3.0,
-        engine_weights={"docling": 1.0, "mineru": 1.0, "lmstudio": 0.75},
+        engine_weights={
+            "docling": 1.0,
+            "mineru": 1.0,
+            "lmstudio": 0.75,
+            "infinity": 0.75,
+        },
     ),
     "recall": FusionProfile(
         name="recall",
@@ -59,7 +69,12 @@ FUSION_PROFILES = {
         merge_coverage_threshold=0.55,
         consensus_iou_threshold=0.15,
         consensus_area_ratio=6.0,
-        engine_weights={"docling": 1.0, "mineru": 1.0, "lmstudio": 1.0},
+        engine_weights={
+            "docling": 1.0,
+            "mineru": 1.0,
+            "lmstudio": 1.0,
+            "infinity": 1.0,
+        },
     ),
 }
 

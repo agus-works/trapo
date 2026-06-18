@@ -7,7 +7,12 @@ export interface DocumentRouteSearch {
   overlay?: string;
   term?: string;
   highlight?: string;
-  markdown?: 'best_available_markdown' | 'lmstudio_markdown' | 'markitdown' | 'markitdown_cu';
+  markdown?:
+    | 'best_available_markdown'
+    | 'lmstudio_markdown'
+    | 'infinity_markdown'
+    | 'markitdown'
+    | 'markitdown_cu';
   overlays?: 'all' | 'selected' | 'hidden';
   view?: 'preview' | 'markdown' | 'split';
   explorerView?: 'tiles' | 'details';
@@ -76,9 +81,16 @@ function viewModeValue(value: unknown): 'preview' | 'markdown' | 'split' | undef
 
 function markdownEngineValue(
   value: unknown,
-): 'best_available_markdown' | 'lmstudio_markdown' | 'markitdown' | 'markitdown_cu' | undefined {
+):
+  | 'best_available_markdown'
+  | 'lmstudio_markdown'
+  | 'infinity_markdown'
+  | 'markitdown'
+  | 'markitdown_cu'
+  | undefined {
   return value === 'best_available_markdown' ||
     value === 'lmstudio_markdown' ||
+    value === 'infinity_markdown' ||
     value === 'markitdown' ||
     value === 'markitdown_cu'
     ? value

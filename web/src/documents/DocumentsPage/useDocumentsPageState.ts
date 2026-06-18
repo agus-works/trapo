@@ -53,6 +53,11 @@ const DEFAULT_MARKDOWN_ENGINES: MarkdownEngineRecord[] = [
     page_count: 0,
   },
   {
+    label: 'Infinity Parser2',
+    markdown_engine: 'infinity_markdown',
+    page_count: 0,
+  },
+  {
     label: 'MarkItDown',
     markdown_engine: 'markitdown',
     page_count: 0,

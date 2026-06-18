@@ -9,7 +9,8 @@ The short version is:
 
 - The page Markdown pass runs after raw annotation engines and fusion.
 - Multiple plain-Markdown generators can run for the same page. The default
-    generator set is `markitdown`; `lmstudio_markdown` is opt-in.
+    generator set is `markitdown`; `lmstudio_markdown` and
+    `infinity_markdown` are opt-in unless `--page-markdown-engines all` is used.
 - At ingest start, Trapo best-effort loads the LM Studio model at its advertised
     maximum context length through LM Studio's native REST API.
 - PDF pages and image frames are rendered page-by-page as Markdown-specific
@@ -30,6 +31,7 @@ The short version is:
 See also:
 
 - [LM Studio engine overview](lmstudio-engine.md)
+- [Infinity Parser2 engine](infinity-parser2-engine.md)
 - [Schema reference](schema.md)
 
 ## Pipeline Placement
@@ -69,6 +71,11 @@ can compare outputs without overwriting rows:
   This is opt-in; if the selected model returns empty structured output, Trapo
   stores the generator as partial while other requested Markdown engines can
   still complete the ingest.
+- `infinity_markdown` - local Infinity Parser2 Python package using
+  `infly/Infinity-Parser2-Flash` by default. It consumes the same cached page
+  Markdown JPEG artifacts and runs `doc2md` per page. The Python package expects
+  filesystem image paths, so this engine forces page-image cache artifacts even
+  when `--no-page-markdown-cache` is set.
 - `markitdown` - MarkItDown local conversion. For PDFs, the OCR plugin emits
   page sections such as `## Page 61`, which Trapo splits into per-page rows.
   For raster image inputs, Trapo first renders every image frame to cached JPEG
@@ -77,8 +84,9 @@ can compare outputs without overwriting rows:
 - `markitdown_cu` - MarkItDown Azure Content Understanding conversion. This is
   opt-in because it requires an Azure endpoint and credentials.
 - `best_available_markdown` - virtual API/viewer engine. It reads
-  `lmstudio_markdown`, then `markitdown`, then `markitdown_cu`, and falls back to
-  OCR text only when no provider row exists for the active page.
+  `lmstudio_markdown`, then `infinity_markdown`, then `markitdown`, then
+  `markitdown_cu`, and falls back to OCR text only when no provider row exists
+  for the active page.
 
 Provider-specific selections do not use the OCR fallback. This keeps debugging
 clear: choosing `lmstudio_markdown` shows only LM Studio rows; choosing

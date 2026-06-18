@@ -1,6 +1,6 @@
 # DuckDB Schema
 
-Trapo stores local Docling/MinerU/LM Studio ingest output, deterministic fused
+Trapo stores local Docling/MinerU/LM Studio/Infinity Parser2 ingest output, deterministic fused
 annotation output, and search indexes in DuckDB.
 The schema is intentionally small: raw OCR outputs, deterministic chunks, page
 regions with bounding boxes, cache-backed normalized preview images,
@@ -86,7 +86,7 @@ Provider-aware raw OCR/annotation output linked to a file hash.
 | Column | Type | Notes |
 | --- | --- | --- |
 | `file_hash` | TEXT | Part of primary key |
-| `annotation_engine` | TEXT | Part of primary key; `docling`, `mineru`, cache-backed normalized engines `docling_normalized` and `mineru_normalized`, `lmstudio`, LM Studio prompt-profile engines such as `lmstudio_strict`, `fusion`, or profile-specific fusion engines such as `fusion_recall` |
+| `annotation_engine` | TEXT | Part of primary key; `docling`, `mineru`, cache-backed normalized engines `docling_normalized` and `mineru_normalized`, `lmstudio`, `infinity`, LM Studio prompt-profile engines such as `lmstudio_strict`, `fusion`, or profile-specific fusion engines such as `fusion_recall` |
 | `ingest_run_id` | BIGINT | |
 | `text` | TEXT | Markdown/text export when available |
 | `output_json` | JSON | Full provider output retained for later reprocessing |
@@ -113,7 +113,8 @@ fallback). FTS is built over `text`.
 ### `document_regions`
 
 Page regions with bounding boxes derived from Docling provenance, MinerU content
-outputs, cache-backed normalized Docling/MinerU page-image outputs, LM Studio
+outputs, cache-backed normalized Docling/MinerU page-image outputs, LM Studio,
+Infinity Parser2
 page-level vision outputs, and deterministic fused boxes.
 Used to draw overlays in PDF and supported image previews, and to anchor word
 terms.
@@ -122,7 +123,7 @@ terms.
 | --- | --- | --- |
 | `region_id` | TEXT | Primary key (hash of file + bbox) |
 | `file_hash` | TEXT | |
-| `annotation_engine` | TEXT | `docling`, `mineru`, `docling_normalized`, `mineru_normalized`, `lmstudio`, LM Studio prompt-profile engines such as `lmstudio_recall`, `fusion`, or profile-specific fusion engines such as `fusion_recall` |
+| `annotation_engine` | TEXT | `docling`, `mineru`, `docling_normalized`, `mineru_normalized`, `lmstudio`, `infinity`, LM Studio prompt-profile engines such as `lmstudio_recall`, `fusion`, or profile-specific fusion engines such as `fusion_recall` |
 | `annotation_provider` / `annotation_model` | TEXT | Provider identity |
 | `chunk_id` / `chunk_index` | BIGINT / INTEGER | Linked chunk, if any |
 | `page_no` | INTEGER | |
@@ -165,7 +166,7 @@ Pipeline details: [page-markdown-pipeline.md](page-markdown-pipeline.md)
 | --- | --- | --- |
 | `file_hash` | TEXT | Part of primary key |
 | `page_no` | INTEGER | Part of primary key |
-| `markdown_engine` | TEXT | Part of primary key; provider-specific engines such as `lmstudio_markdown`, `markitdown`, or `markitdown_cu` |
+| `markdown_engine` | TEXT | Part of primary key; provider-specific engines such as `lmstudio_markdown`, `infinity_markdown`, `markitdown`, or `markitdown_cu` |
 | `markdown_provider` / `markdown_model` | TEXT | Local provider/model identity |
 | `markdown_text` | TEXT | Faithful Markdown for the visible page |
 | `page_width` / `page_height` | DOUBLE | Display page dimensions used for the prompt image |
@@ -186,7 +187,7 @@ all page rows.
 | Column | Type | Notes |
 | --- | --- | --- |
 | `file_hash` | TEXT | Part of primary key |
-| `markdown_engine` | TEXT | Part of primary key; `lmstudio_markdown`, `markitdown`, or `markitdown_cu` |
+| `markdown_engine` | TEXT | Part of primary key; `lmstudio_markdown`, `infinity_markdown`, `markitdown`, or `markitdown_cu` |
 | `ingest_run_id` | BIGINT | Ingest run that most recently attempted the generator |
 | `markdown_provider` / `markdown_model` | TEXT | Provider/model identity |
 | `status` | TEXT | `ok` or `error` |

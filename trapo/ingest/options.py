@@ -12,6 +12,13 @@ from trapo.ingest.lmstudio_models import (
     DEFAULT_LMSTUDIO_ORIENTATION_MIN_CONFIDENCE,
     DEFAULT_LMSTUDIO_TIMEOUT_SECONDS,
 )
+from trapo.ingest.infinity_models import (
+    DEFAULT_INFINITY_BACKEND,
+    DEFAULT_INFINITY_BATCH_SIZE,
+    DEFAULT_INFINITY_DEVICE,
+    DEFAULT_INFINITY_MODEL,
+    DEFAULT_INFINITY_TORCH_DTYPE,
+)
 from trapo.ingest.page_markdown_images import (
     DEFAULT_PAGE_MARKDOWN_CACHE_ROOT,
     DEFAULT_PAGE_MARKDOWN_IMAGE_FORMAT,
@@ -44,6 +51,11 @@ class IngestOptions:
     mineru_parse_method: str = "auto"
     mineru_language: str = "en"
     mineru_processing_window_size: int = DEFAULT_MINERU_PROCESSING_WINDOW_SIZE
+    infinity_model: str = DEFAULT_INFINITY_MODEL
+    infinity_backend: str = DEFAULT_INFINITY_BACKEND
+    infinity_batch_size: int = DEFAULT_INFINITY_BATCH_SIZE
+    infinity_device: str = DEFAULT_INFINITY_DEVICE
+    infinity_torch_dtype: str = DEFAULT_INFINITY_TORCH_DTYPE
     lmstudio_base_url: str = DEFAULT_LMSTUDIO_BASE_URL
     lmstudio_model: str = DEFAULT_LMSTUDIO_MODEL
     lmstudio_timeout_seconds: float = DEFAULT_LMSTUDIO_TIMEOUT_SECONDS

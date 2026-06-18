@@ -9,7 +9,8 @@ from trapo.server.models import RawBBox
 FUSION_ENGINE = "fusion"
 FUSION_PROVIDER = "trapo"
 FUSION_MODEL = "trapo-region-fusion-v1"
-SOURCE_ENGINES = {"docling", "mineru", "lmstudio"}
+SOURCE_ENGINES = {"docling", "mineru", "lmstudio", "infinity"}
+CORE_SOURCE_ENGINES = {"docling", "mineru", "lmstudio"}
 
 
 @dataclass(frozen=True)

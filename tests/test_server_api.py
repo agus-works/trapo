@@ -433,6 +433,7 @@ def test_document_markdown_api_best_available_uses_markitdown_backup(
     assert [engine["markdown_engine"] for engine in payload["available_engines"]] == [
         BEST_AVAILABLE_MARKDOWN_ENGINE,
         "lmstudio_markdown",
+        "infinity_markdown",
         MARKITDOWN_MARKDOWN_ENGINE,
         "markitdown_cu",
     ]

@@ -54,7 +54,8 @@ def read_markdown_mappings_by_engine_and_page(
 ) -> dict[tuple[str, int], list[MarkdownRegionMapping]]:
     if not table_exists(connection, "document_page_markdown_regions"):
         return {}
-    filters = ["file_hash = ?", "markdown_engine IN (?, ?, ?)"]
+    engine_placeholders = ", ".join("?" for _engine in MARKDOWN_ENGINE_PRIORITY)
+    filters = ["file_hash = ?", f"markdown_engine IN ({engine_placeholders})"]
     parameters: list[object] = [file_hash, *MARKDOWN_ENGINE_PRIORITY]
     if page_no is not None:
         filters.append("page_no = ?")
