@@ -1,0 +1,209 @@
+.chatWorkbench {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.chatConversationPane,
+.chatThreadPane {
+  min-width: 0;
+  min-height: 0;
+}
+
+.chatConversationPane {
+  display: grid;
+  grid-template-rows: 34px minmax(0, 1fr);
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.chatThreadPane {
+  display: grid;
+  grid-template-rows: 34px minmax(0, 1fr) auto;
+}
+
+.chatConversationList {
+  min-height: 0;
+}
+
+.chatConversationList button {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+}
+
+.chatConversationList button:hover,
+.chatConversationList button.active {
+  background: var(--list-selection-background);
+}
+
+.chatConversationList strong,
+.chatConversationList span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatConversationList span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.chatRouteBadge {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.chatTranscript {
+  min-height: 0;
+  background: var(--panel);
+}
+
+.chatTranscriptInner {
+  min-height: 100%;
+}
+
+.chatEmpty {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+  padding: 24px;
+  text-align: center;
+}
+
+.chatMessage {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 16px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
+}
+
+.chatMessage.user {
+  background: color-mix(in srgb, var(--panel-muted) 42%, transparent);
+}
+
+.chatMessage.assistant.pending {
+  color: var(--muted);
+}
+
+.chatMessage.error {
+  color: var(--danger);
+}
+
+.chatRole {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chatRole small {
+  overflow: hidden;
+  color: var(--subtle);
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatProcessLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.chatProcessLink:hover {
+  text-decoration: underline;
+}
+
+.chatMessage > p,
+.chatMessage > pre {
+  min-width: 0;
+  margin: 0;
+}
+
+.chatComposer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 8px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-muted);
+}
+
+.chatComposer textarea {
+  min-width: 0;
+  resize: vertical;
+  border: 1px solid var(--input-border);
+  border-radius: 0;
+  background: var(--input-background);
+  color: var(--foreground);
+  padding: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.chatComposer textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.chatComposer .uiButton {
+  align-self: end;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.chatProgress {
+  display: grid;
+  gap: 5px;
+  margin: 10px 18px;
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  background: var(--panel-muted);
+  font-size: 12px;
+}
+
+.chatProgress > div,
+.chatProgress a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chatProgress p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.chatProgress span {
+  color: var(--accent);
+}
+
+.chatProgress a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.chatProgress a:hover {
+  text-decoration: underline;
+}

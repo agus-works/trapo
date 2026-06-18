@@ -1,0 +1,149 @@
+.treeView,
+.treeGrid {
+  min-width: 0;
+  padding: 2px 0;
+  font-size: 13px;
+}
+
+.treeGrid {
+  border: 0;
+  background: transparent;
+}
+
+.treeRow,
+.treeGridRow {
+  align-items: center;
+  color: var(--foreground);
+}
+
+.treeRow {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  gap: 4px;
+  min-height: 24px;
+  padding: 0 8px 0 calc(4px + (var(--tree-level, 0) * 14px));
+}
+
+.treeRowWithCheckbox {
+  grid-template-columns: 16px 16px minmax(0, 1fr) auto;
+}
+
+.treeGridRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px 42px;
+  min-height: 26px;
+}
+
+.treeRow:hover,
+.treeGridRow:hover {
+  background: var(--list-hover-background);
+}
+
+.active {
+  background: var(--list-selection-background);
+}
+
+.treeTwisty,
+.treeLabelButton {
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.treeTwisty {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 22px;
+  padding: 0;
+}
+
+.treeLabelButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  height: 22px;
+  padding: 0;
+  text-align: left;
+}
+
+.treeLabelButton svg {
+  flex: 0 0 auto;
+}
+
+.treeLabelButton span,
+.treeRow small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.treeRow small,
+.treeGridBadge {
+  color: var(--subtle);
+  font-size: 11px;
+}
+
+.treeGridName {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  min-width: 0;
+  padding-left: calc(4px + (var(--tree-level, 0) * 14px));
+}
+
+.treeGridBadge {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 8px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.treeGridSwitchCell {
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 8px;
+}
+
+.treeGridSwitch {
+  position: relative;
+  width: 26px;
+  height: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  padding: 0;
+  background: var(--panel-muted);
+}
+
+.treeGridSwitch span {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 8px;
+  height: 8px;
+  background: var(--subtle);
+}
+
+.treeGridSwitch[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--list-selection-background);
+}
+
+.treeGridSwitch[aria-checked="true"] span {
+  right: 2px;
+  left: auto;
+  background: var(--accent);
+}
+
+.treeGridSwitch[aria-checked="mixed"] span {
+  top: 5px;
+  right: 2px;
+  left: 2px;
+  width: auto;
+  height: 2px;
+  background: var(--accent);
+}

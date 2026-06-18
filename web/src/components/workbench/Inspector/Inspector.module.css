@@ -1,0 +1,81 @@
+.propertyInspector {
+  min-width: 0;
+  padding: 8px 10px 18px;
+  font-size: 12px;
+}
+
+.propertyInspector h3,
+.propertyInspector h4,
+.propertyInspector dl,
+.propertyInspector p {
+  margin: 0;
+}
+
+.propertyInspector h3 {
+  margin-bottom: 10px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.propertyInspector h4 {
+  margin: 12px 0 5px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.propertyInspector dl,
+.propertyGrid {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 5px 10px;
+  margin: 0;
+}
+
+.propertyInspector dt,
+.propertyGrid dt {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.propertyInspector dd,
+.propertyGrid dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.emptyPropertyInspector,
+.emptyInspector {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  min-height: 120px;
+  padding: 16px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.detailAccordion {
+  min-width: 0;
+  padding: 4px 0;
+}
+
+.detailInspectorTitle {
+  border-bottom: 1px solid var(--border);
+  padding: 8px 10px;
+}
+
+.detailInspectorTitle h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mutedText {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}

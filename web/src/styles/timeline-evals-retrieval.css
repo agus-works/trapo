@@ -1,0 +1,103 @@
+.timelineWorkbench,
+.evalsWorkbench,
+.ontologyWorkbench,
+.retrievalWorkbench {
+  background: var(--background);
+}
+
+.timelineTablePane,
+.timelineDetailPane,
+.ontologyVersionsPane,
+.ontologyMainPane,
+.ontologyDetailsPane,
+.evalRunsPane,
+.evalBottomPane,
+.evalResultsPane,
+.evalDetailsPane,
+.retrievalHyperedgesPane,
+.retrievalHypernodesPane,
+.retrievalBottomPane,
+.retrievalMembersPane,
+.retrievalDetailsPane {
+  display: grid;
+  grid-template-rows: 34px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.timelineTablePane select {
+  min-width: 110px;
+}
+
+.evalsWorkbench {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.ontologyWorkbench {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.retrievalWorkbench {
+  display: grid;
+  grid-template-rows: 32px minmax(0, 1fr) auto;
+}
+
+.retrievalBody {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.evalBottomPane,
+.retrievalBottomPane {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.evalRunsPane select {
+  min-width: 112px;
+  text-transform: capitalize;
+}
+
+.evalStatus {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  padding: 1px 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.evalStatus.pass {
+  border-color: color-mix(in srgb, var(--success) 45%, var(--border));
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  color: var(--success);
+}
+
+.evalStatus.warn,
+.evalStatus.warning {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--warning);
+}
+
+.evalStatus.fail,
+.evalStatus.error {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+.evalStatus.running {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}

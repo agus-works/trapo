@@ -1,0 +1,16 @@
+.statusBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 24px;
+  border-top: 1px solid var(--border);
+  padding: 0 8px;
+  background: var(--status-background);
+  color: var(--status-foreground);
+  font-size: 12px;
+}
+
+.statusBar strong {
+  color: var(--foreground);
+  font-weight: 700;
+}

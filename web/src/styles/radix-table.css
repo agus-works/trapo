@@ -1,0 +1,100 @@
+.checkboxRoot {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--input-background);
+  color: var(--accent-foreground);
+}
+
+.checkboxRoot[data-state="checked"],
+.checkboxRoot[data-state="indeterminate"] {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.checkboxIndicator {
+  display: grid;
+  place-items: center;
+}
+
+.workbenchTabs {
+  display: flex;
+  align-items: stretch;
+  min-height: 35px;
+  border-bottom: 1px solid var(--border);
+  background: var(--pane-header);
+}
+
+.workbenchTabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 88px;
+  border: 0;
+  border-top: 1px solid transparent;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.workbenchTabs button:hover {
+  background: var(--list-hover-background);
+  color: var(--foreground);
+}
+
+.workbenchTabs button.active {
+  border-top-color: var(--tab-active-border-top);
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.tableViewport {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.uiTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.uiTableHeader {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  background: var(--pane-header);
+}
+
+.uiTableRow {
+  border-bottom: 1px solid var(--border);
+}
+
+.uiTableBody .uiTableRow:hover,
+.uiTableBody .uiTableRow.selected {
+  background: var(--list-selection-background);
+}
+
+.uiTableHead,
+.uiTableCell {
+  max-width: 360px;
+  padding: 5px 8px;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uiTableHead {
+  color: var(--muted);
+  font-weight: 700;
+}

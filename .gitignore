@@ -1,0 +1,31 @@
+# Locals
+.cache/
+.logs/
+.skylos/cache/
+.pytest_*/
+.ruff*/
+.uv*/
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+*.log
+
+# Virtual environments
+.venv
+
+# Local Trapo CLI state
+.trapo-chat-history
+.env.local
+*.duckdb
+*.duckdb.wal
+
+# Frontend dependencies and build output
+web/node_modules/
+web/dist/
+web/storybook-static/
+web/*.tsbuildinfo

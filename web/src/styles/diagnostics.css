@@ -1,0 +1,142 @@
+.diagnosticsOverlay {
+  position: fixed;
+  z-index: 70;
+  pointer-events: none;
+}
+
+.diagnosticsOverlay.bottom,
+.diagnosticsOverlay.left,
+.diagnosticsOverlay.right {
+  inset: 0;
+}
+
+.diagnosticsSpacer {
+  pointer-events: none;
+}
+
+.diagnosticsPanelSlot {
+  pointer-events: auto;
+}
+
+.diagnosticsPane {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border-strong);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.diagnosticsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  border-bottom: 1px solid var(--border);
+  padding: 0 8px;
+  background: var(--pane-header);
+}
+
+.diagnosticsHeader > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.diagnosticsHeader span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.diagnosticsActions button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.diagnosticsActions button:hover,
+.diagnosticsActions button.active {
+  border-color: var(--border);
+  background: var(--panel);
+  color: var(--foreground);
+}
+
+.diagnosticsStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--border);
+}
+
+.diagnosticsMetric {
+  display: grid;
+  gap: 2px;
+  padding: 7px 8px;
+  border-right: 1px solid var(--border);
+}
+
+.diagnosticsMetric:last-child {
+  border-right: 0;
+}
+
+.diagnosticsMetric strong {
+  font-size: 18px;
+}
+
+.diagnosticsMetric span {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.diagnosticsContent {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.diagnosticsList {
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid var(--border);
+}
+
+.diagnosticsList:last-child {
+  border-right: 0;
+}
+
+.diagnosticsList h3 {
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.diagnosticsRow {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.8fr) 86px minmax(0, 1.4fr);
+  gap: 8px;
+  min-height: 30px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+.diagnosticsRow strong,
+.diagnosticsRow small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diagnosticsRow span {
+  color: var(--muted);
+}

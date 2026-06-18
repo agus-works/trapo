@@ -1,0 +1,68 @@
+.eventStack {
+  display: grid;
+  gap: 10px;
+}
+
+.eventCard {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-left: 3px solid #3b82c4;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--background) 86%, var(--panel));
+}
+
+.eventCard[data-severity="error"] {
+  border-left-color: #c93c37;
+}
+
+.eventCard header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.eventCard header span {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.eventMeta {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.eventMeta dt {
+  color: var(--muted-foreground);
+}
+
+.eventMeta dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.attachment {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-size: 12px;
+}
+
+.attachment code {
+  overflow-wrap: anywhere;
+}
+
+.eventBlock summary {
+  cursor: pointer;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}

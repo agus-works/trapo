@@ -1,0 +1,228 @@
+.markdownBlock {
+  min-width: 0;
+  font-size: 13px;
+}
+
+.markdownBlock h3,
+.markdownBlock h4,
+.markdownBlock h5,
+.markdownBlock h6 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.markdownBlock p,
+.markdownBlock ul {
+  margin: 0 0 10px;
+}
+
+.markdownBlock ul {
+  padding-left: 18px;
+}
+
+.markdownBlock code,
+.chatParameters {
+  border: 1px solid var(--border);
+  background: var(--panel-muted);
+  padding: 1px 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.markdownMath {
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  padding: 0 4px;
+  font-family: var(--font-sans);
+}
+
+.markdownBlock pre,
+.chatToolCall pre,
+.chatMessage.error pre {
+  overflow: auto;
+  margin: 6px 0;
+  border: 1px solid var(--border);
+  background: var(--panel-muted);
+  padding: 8px;
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.markdownCodeBlock[data-language]::before {
+  display: block;
+  margin: -2px 0 6px;
+  color: var(--subtle);
+  content: attr(data-language);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.markdownMermaid {
+  margin: 8px 0 12px;
+  border: 1px solid var(--border);
+  background: var(--panel-muted);
+}
+
+.markdownMermaid span {
+  display: block;
+  border-bottom: 1px solid var(--border);
+  padding: 5px 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.markdownMermaid pre {
+  margin: 0;
+  border: 0;
+}
+
+.markdownTableViewport {
+  overflow: auto;
+  max-width: 100%;
+  margin: 8px 0 12px;
+  border: 1px solid var(--border);
+}
+
+.markdownTableViewport table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.markdownTableViewport th,
+.markdownTableViewport td {
+  padding: 5px 7px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdownTableViewport th {
+  background: var(--pane-header);
+  font-weight: 700;
+}
+
+.chatDiagnostics {
+  grid-column: 2;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin-top: 10px;
+  color: var(--foreground);
+}
+
+.chatDiagnostics section {
+  min-width: 0;
+}
+
+.chatDiagnostics h4 {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.chatDiagnostics ol {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.chatToolCall {
+  min-width: 0;
+  border-top: 1px solid var(--border);
+  padding: 5px 0;
+}
+
+.chatToolCall summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--foreground);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.chatToolCall p {
+  margin: 6px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.chatCitationList {
+  display: grid;
+  gap: 6px;
+}
+
+.chatCitation {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 4px 10px;
+  min-width: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  font-size: 12px;
+}
+
+.chatCitation strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatCitationHeader {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.chatCitationLink {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.chatCitationLink:hover {
+  text-decoration: underline;
+}
+
+.chatCitation span,
+.chatCitation small,
+.chatCitation p {
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
+}
+
+.chatCitation small,
+.chatCitation p {
+  grid-column: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatToolCall summary span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chatToolCall summary small {
+  margin-left: auto;
+  color: var(--muted);
+}

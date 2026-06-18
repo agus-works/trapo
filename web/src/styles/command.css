@@ -1,0 +1,193 @@
+.commandOverlay {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  align-items: start;
+  justify-items: center;
+  padding-top: 9vh;
+  background: var(--overlay-background);
+}
+
+.commandBackdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+}
+
+.commandDialog {
+  position: relative;
+  z-index: 1;
+  width: min(760px, calc(100vw - 32px));
+  border: 1px solid var(--border-strong);
+  background: var(--graph-panel);
+  color: var(--foreground);
+  box-shadow: var(--widget-shadow);
+}
+
+.commandRoot {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 360px;
+  max-height: min(72vh, 680px);
+}
+
+.commandInputRow {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding: 0 12px;
+  color: var(--muted);
+}
+
+.commandInput {
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  outline: none;
+}
+
+.commandList {
+  max-height: min(62vh, 600px);
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.commandEmpty {
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.commandGroup {
+  padding: 4px 0;
+}
+
+.commandGroup [cmdk-group-heading] {
+  padding: 5px 8px;
+  color: var(--subtle);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.commandItem {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.commandItem[aria-selected="true"] {
+  border-color: var(--accent);
+  background: var(--list-selection-background);
+}
+
+.commandItem[data-disabled="true"] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.commandResultText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.commandResultText strong,
+.commandResultText span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commandResultText strong {
+  font-size: 13px;
+}
+
+.commandResultText span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.commandShortcut {
+  color: var(--subtle);
+  font-size: 11px;
+}
+
+.commandSeparator {
+  height: 1px;
+  margin: 6px 2px;
+  background: var(--border);
+}
+
+.commandMatch {
+  border-radius: 2px;
+  padding: 0 1px;
+  background: color-mix(in srgb, var(--warning) 28%, transparent);
+  color: inherit;
+}
+
+.commandMatch.fuzzy_alignment {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.commandMatch.fts_term,
+.commandMatch.exact_phrase,
+.commandMatch.exact_token {
+  background: color-mix(in srgb, var(--success) 24%, transparent);
+}
+
+.commandWizard {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.commandWizard header,
+.commandWizard footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.commandWizard textarea {
+  width: 100%;
+  min-height: 120px;
+  border: 1px solid var(--input-border);
+  padding: 8px;
+  background: var(--input-background);
+  color: var(--foreground);
+  outline: none;
+  resize: vertical;
+}
+
+.commandWizard button,
+.commandNotice {
+  border: 1px solid var(--border);
+  padding: 5px 9px;
+  background: var(--panel-muted);
+  color: var(--foreground);
+}
+
+.commandWizard button[type="submit"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.commandNotice {
+  border-width: 1px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}

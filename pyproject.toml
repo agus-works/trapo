@@ -1,0 +1,177 @@
+[project]
+name = "trapo"
+version = "0.1.0"
+description = "Local document ontology and graph-memory RAG CLI"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Agus Works" }]
+requires-python = ">=3.14"
+dependencies = [
+    "docling>=2.101.0",
+    "docling-core>=2.81.0",
+    "docling-slim[standard]>=2.101.0",
+    "duckdb>=1.5.3",
+    "azure-ai-contentunderstanding>=1.2.0b1",
+    "azure-identity>=1.25.0",
+    "fastapi>=0.136.3",
+    "httpx>=0.28.1",
+    "logfire>=4.35.0",
+    "markitdown>=0.1.0",
+    "markitdown-ocr>=0.1.0",
+    "mineru[pipeline]",
+    "opentelemetry-exporter-otlp-proto-http>=1.39.1",
+    "opentelemetry-instrumentation-fastapi>=0.60b1",
+    "opentelemetry-instrumentation-httpx>=0.60b1",
+    "opentelemetry-sdk>=1.39.1",
+    "pdfplumber>=0.11.9",
+    "pillow>=12.2.0",
+    "pydantic>=2.13.4",
+    "pypdfium2==4.30.0",
+    "python-dotenv>=1.2.2",
+    "ray",
+    "rapidfuzz>=3.14.5",
+    "starlette>=1.3.1",
+    "torch>=2.12.0",
+    "torchvision>=0.27.0",
+    "typer>=0.21.2",
+    "uvicorn[standard]>=0.49.0",
+]
+
+[project.scripts]
+trapo = "trapo.cli:main"
+
+[project.optional-dependencies]
+qa = ["skylos>=4.24.2"]
+test = ["pytest>=9.0.2"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.0.2",
+    "ruff>=0.15.16",
+]
+qa = [
+    "skylos>=4.24.2",
+]
+
+# PyTorch on Windows publishes CPU-only wheels to PyPI, which forces Docling
+# (layout, table, and RapidOCR models) onto the CPU. Pin Windows to the CUDA 13.0
+# build so the local NVIDIA GPU is used. Linux PyPI wheels already bundle CUDA,
+# and macOS uses the default wheels (CPU/MPS), so the override is scoped to win32.
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.uv.sources]
+markitdown = { path = "../markitdown/packages/markitdown", editable = true }
+markitdown-ocr = { path = "../markitdown/packages/markitdown-ocr", editable = true }
+mineru = { path = "../MinerU", editable = true }
+ray = { path = "../ray/python", editable = true }
+torch = [{ index = "pytorch-cu130", marker = "sys_platform == 'win32'" }]
+torchvision = [{ index = "pytorch-cu130", marker = "sys_platform == 'win32'" }]
+
+[tool.pyrefly]
+project-includes = [
+    "**/*.py*",
+    "**/*.ipynb",
+]
+
+[tool.skylos]
+exclude = [
+    ".cache",
+    ".logs",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".ruff-cache",
+    ".skylos",
+    ".uv-cache",
+    ".uv-tool",
+    ".venv",
+    "test_dir",
+    "web/dist",
+    "web/openapi",
+    "web/src/generated",
+]
+ignore = []
+
+[tool.skylos.gate]
+fail_on_critical = true
+max_critical = 0
+max_high = 0
+max_security = 0
+max_quality = 0
+max_secrets = 0
+max_dependency_vulnerabilities = 0
+strict = false
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+# Same as Black.
+line-length = 88
+indent-width = 4
+
+# Assume Python 3.10
+target-version = "py310"
+
+[tool.ruff.lint]
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes by default.
+select = ["E4", "E7", "E9", "F", "PL"]
+ignore = []
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.pylint]
+max-statements = 320
+max-returns = 3
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"

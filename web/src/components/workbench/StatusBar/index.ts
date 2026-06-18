@@ -1,0 +1,1 @@
+export { WorkbenchStatusBar } from './StatusBar';

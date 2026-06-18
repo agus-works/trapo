@@ -1,0 +1,56 @@
+@media (max-width: 920px) {
+  .rootShell {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .activityBrand,
+  .activityNav a,
+  .activityFooter button {
+    width: 42px;
+    height: 42px;
+  }
+
+  .documentTopBar,
+  .pdfToolbar,
+  .denseTableToolbar,
+  .denseTablePager {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pdfScroll .scrollAreaViewport {
+    padding: 10px;
+  }
+
+  .chatMessage {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .chatWorkbench {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(180px, 0.34fr) minmax(0, 0.66fr);
+  }
+
+  .chatConversationPane {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .chatDiagnostics {
+    grid-column: 1;
+  }
+
+  .chatComposer {
+    grid-template-columns: 1fr;
+  }
+
+  .chatCitation {
+    grid-template-columns: 1fr;
+  }
+
+  .chatCitation small,
+  .chatCitation p {
+    grid-column: 1;
+  }
+}

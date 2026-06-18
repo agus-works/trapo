@@ -1,0 +1,187 @@
+.folderView {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  background: var(--background);
+}
+
+.folderToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  padding: 7px 10px;
+  background: var(--panel-muted);
+}
+
+.folderTitle {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.folderTitle strong {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folderTitle span,
+.tileMeta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.folderControls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.folderControls select {
+  min-height: 28px;
+  border: 1px solid var(--input-border);
+  border-radius: 0;
+  padding: 3px 7px;
+  background: var(--input-background);
+  color: var(--foreground);
+  outline: none;
+}
+
+.activeButton {
+  background: var(--list-selection-background);
+  color: var(--foreground);
+}
+
+.tileGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(max(96px, var(--tile-size)), 1fr));
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+.fileTile {
+  display: grid;
+  grid-template-rows: var(--tile-size) auto auto;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid transparent;
+  padding: 8px;
+  background: transparent;
+  color: var(--foreground);
+  text-align: center;
+}
+
+.fileTile:hover,
+.selectedTile {
+  border-color: var(--accent);
+  background: var(--list-selection-background);
+}
+
+.thumbnail {
+  position: relative;
+  display: grid;
+  width: var(--tile-size);
+  height: var(--tile-size);
+  margin: 0 auto;
+  place-items: center;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+}
+
+.thumbnail img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #ffffff;
+}
+
+.thumbnailIcon {
+  display: grid;
+  place-items: center;
+}
+
+.tileName {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 12px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.tileMeta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailsGrid {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.detailsGrid table {
+  min-width: 1120px;
+}
+
+.sortHeader {
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.nameCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.pathCell {
+  max-width: 360px;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dateCell {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.selectedRow,
+.selectedRow:hover {
+  background: var(--list-selection-background);
+}
+
+@media (max-width: 920px) {
+  .folderToolbar,
+  .folderControls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .folderControls {
+    width: 100%;
+  }
+}

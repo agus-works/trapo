@@ -1,0 +1,154 @@
+.graphWorkbench {
+  background: var(--graph);
+}
+
+.centerPane,
+.graphCanvasPane {
+  background: var(--graph);
+}
+
+.graphCanvasPane {
+  display: grid;
+  grid-template-rows: 54px minmax(0, 1fr);
+}
+
+.graphTopBar {
+  padding: 8px 12px;
+  background: var(--graph-panel);
+  color: var(--graph-foreground);
+}
+
+.graphTopBar p {
+  color: color-mix(in srgb, var(--graph-foreground) 70%, transparent);
+}
+
+.graphStage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--graph);
+}
+
+.graphStage canvas {
+  display: block;
+}
+
+.graphOverlayMessage {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  left: 12px;
+  max-width: min(420px, calc(100% - 24px));
+  border: 1px solid color-mix(in srgb, var(--graph-foreground) 22%, transparent);
+  border-radius: 4px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--graph-panel) 92%, transparent);
+  color: var(--graph-foreground);
+  font-size: 12px;
+}
+
+.graphOverlayMessage.error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.sidebarStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px;
+}
+
+.segmented.compact {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.segmented.compact button {
+  min-height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.segmented.compact button.active {
+  border-color: var(--accent);
+  background: var(--list-selection-background);
+}
+
+.searchBox {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 0 8px;
+  background: var(--panel);
+}
+
+.searchBox svg {
+  color: var(--muted);
+}
+
+.searchBox input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.graphTree {
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.graphSectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sidebarSection {
+  display: grid;
+  gap: 6px;
+}
+
+.sidebarAccordion {
+  min-width: 0;
+}
+
+.sidebarAccordionContent {
+  padding: 4px 0 8px;
+}
+
+.numberControl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 82px;
+  align-items: center;
+  gap: 8px;
+  color: var(--foreground);
+  font-size: 12px;
+}
+
+.numberControl input {
+  width: 82px;
+}
+
+.detailAccordion {
+  min-width: 0;
+  padding: 4px 0;
+}

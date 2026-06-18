@@ -1,0 +1,202 @@
+.pdfViewportShell {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--background);
+}
+
+.pdfVirtualScroll {
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: scroll;
+  outline: none;
+  overscroll-behavior: contain;
+  scrollbar-color: color-mix(in srgb, var(--muted) 78%, var(--foreground)) var(--panel);
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: auto;
+}
+
+.pdfVirtualScroll::-webkit-scrollbar {
+  width: 13px;
+  height: 13px;
+}
+
+.pdfVirtualScroll::-webkit-scrollbar-track {
+  background: var(--panel);
+}
+
+.pdfVirtualScroll::-webkit-scrollbar-thumb {
+  border: 3px solid var(--panel);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 72%, var(--foreground));
+}
+
+.pdfVirtualScroll::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted) 48%, var(--foreground));
+}
+
+.pdfVirtualScroll:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.pdfVirtualScroll[data-space-pan="true"],
+.pdfVirtualScroll[data-dragging="true"] {
+  cursor: grab;
+}
+
+.pdfVirtualScroll[data-dragging="true"] {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.virtualCanvas {
+  position: relative;
+  min-width: max-content;
+}
+
+.virtualPageRow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  width: 100%;
+  justify-items: center;
+}
+
+.pageWrap {
+  width: min-content;
+  margin: 0 auto;
+}
+
+.pageHeader {
+  height: 18px;
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pageFrame {
+  position: relative;
+  width: min-content;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.pageWrap[data-active="true"] .pageHeader {
+  color: var(--foreground);
+}
+
+.pageWrap[data-active="true"] .pageFrame {
+  border-color: color-mix(in srgb, var(--accent) 68%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 36%, transparent),
+    var(--shadow);
+}
+
+.pageSurface {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center center;
+}
+
+.documentPreviewImage {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.overlayLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.overlayBox {
+  position: absolute;
+  min-width: 6px;
+  min-height: 6px;
+  border: 2px solid rgb(213 83 68 / 78%);
+  border-radius: 2px;
+  background: rgb(213 83 68 / 12%);
+  pointer-events: auto;
+}
+
+.overlayBox:hover,
+.overlayBoxActive {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.pageNavZone {
+  position: absolute;
+  top: 50%;
+  z-index: 10;
+  display: grid;
+  width: 34px;
+  height: 72px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  color: var(--foreground);
+  cursor: pointer;
+  opacity: 0.72;
+  transform: translateY(-50%);
+}
+
+.pageNavZone:hover,
+.pageNavZone:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 56%, var(--border));
+  opacity: 1;
+}
+
+.pageNavZone:disabled {
+  cursor: default;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pageNavZonePrevious {
+  left: 10px;
+}
+
+.pageNavZoneNext {
+  right: 10px;
+}
+
+.emptyState,
+.pageLoading {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (max-width: 920px) {
+  .pageNavZone {
+    width: 30px;
+    height: 58px;
+  }
+}

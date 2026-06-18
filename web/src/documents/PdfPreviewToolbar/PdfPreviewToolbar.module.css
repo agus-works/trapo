@@ -1,0 +1,197 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  background: var(--panel-muted);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.toolbar input,
+.toolbar select {
+  min-height: 28px;
+  border: 1px solid var(--input-border);
+  border-radius: 0;
+  padding: 3px 7px;
+  background: var(--input-background);
+  color: var(--foreground);
+  outline: none;
+}
+
+.toolbar input {
+  width: 72px;
+}
+
+.toolbar input:focus,
+.toolbar select:focus {
+  border-color: var(--accent);
+}
+
+.toolGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pageStepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pageInputLabel {
+  min-width: 0;
+}
+
+.pageInputLabel input {
+  width: 74px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pageTotal {
+  min-width: 42px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.iconButton {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--input-border);
+  border-radius: 0;
+  padding: 0;
+  background: var(--input-background);
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.iconButton:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--list-hover-background);
+}
+
+.iconButton:disabled {
+  color: var(--muted);
+  cursor: default;
+  opacity: 0.55;
+}
+
+.valuePill {
+  display: inline-grid;
+  place-items: center;
+  min-width: 48px;
+  height: 28px;
+  border: 1px solid var(--input-border);
+  padding: 0 6px;
+  background: var(--input-background);
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.optionsMenu {
+  position: relative;
+  margin-left: auto;
+}
+
+.optionsMenu summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  border: 1px solid var(--input-border);
+  border-radius: 0;
+  padding: 3px 10px;
+  background: var(--input-background);
+  color: var(--foreground);
+  font-size: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.optionsMenu summary::-webkit-details-marker {
+  display: none;
+}
+
+.optionsPanel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 5px);
+  right: 0;
+  display: grid;
+  gap: 10px;
+  width: 260px;
+  border: 1px solid var(--border);
+  padding: 10px;
+  background: var(--graph-panel);
+  box-shadow: var(--widget-shadow);
+}
+
+.optionsPanel label {
+  display: grid;
+  gap: 5px;
+}
+
+.optionGroup {
+  display: grid;
+  gap: 6px;
+}
+
+.optionGroupTitle {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.checkboxRow {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  color: var(--foreground);
+}
+
+.checkboxRow input {
+  width: 14px;
+  min-height: 14px;
+  margin: 0;
+}
+
+.engineSwatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+@media (max-width: 920px) {
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pageStepper,
+  .toolGroup {
+    flex-wrap: wrap;
+  }
+
+  .optionsMenu {
+    margin-left: 0;
+  }
+
+  .optionsPanel {
+    right: auto;
+    left: 0;
+  }
+}

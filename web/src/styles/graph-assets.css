@@ -1,0 +1,169 @@
+.accordionItem {
+  border-bottom: 1px solid var(--border);
+}
+
+.accordionHeader {
+  margin: 0;
+}
+
+.accordionTrigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 30px;
+  border: 0;
+  padding: 0 10px;
+  background: var(--panel);
+  color: var(--foreground);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.accordionTrigger:hover {
+  background: var(--panel-muted);
+}
+
+.accordionTrigger[data-state="open"] svg {
+  transform: rotate(90deg);
+}
+
+.accordionContent {
+  padding: 8px 10px 12px;
+}
+
+.accordionContent h3 {
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.kindDot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+}
+
+.relatedLinkList {
+  display: grid;
+  gap: 5px;
+}
+
+.relatedLinkList div {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.relatedLinkList strong,
+.relatedLinkList small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relatedLinkList small {
+  color: var(--muted);
+}
+
+.rawJson {
+  max-height: 360px;
+  margin: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px;
+  background: var(--graph);
+  color: var(--graph-foreground);
+  font-size: 11px;
+  white-space: pre-wrap;
+}
+
+.assetPane {
+  background: var(--panel-muted);
+}
+
+.assetPreview {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.assetPreviewMeta,
+.assetPreviewToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  padding: 4px 10px;
+  color: var(--foreground);
+  font-size: 12px;
+}
+
+.assetPreviewMeta span,
+.assetPreviewMeta small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assetPreviewMeta small {
+  color: var(--muted);
+}
+
+.assetPreviewStatus {
+  padding: 6px 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.assetPreviewStatus.error {
+  color: var(--danger);
+}
+
+.graphPdfPreviewScroll {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.graphPdfPreviewScroll .scrollAreaViewport {
+  padding: 12px;
+}
+
+.graphPdfPageWrap {
+  width: min-content;
+  margin: 0 auto;
+}
+
+.graphPdfFrame {
+  box-shadow: none;
+}
+
+.graphPreviewOverlay:not(.active) {
+  opacity: 0.45;
+}
+
+.genericAssetPreview {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+}
+
+.genericAssetPreviewContent {
+  padding: 10px;
+}
+
+.genericAssetPreviewContent .assetPreviewMeta {
+  margin: -10px -10px 10px;
+}

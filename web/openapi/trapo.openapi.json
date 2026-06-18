@@ -1,0 +1,2592 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Trapo",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/status": {
+      "get": {
+        "summary": "Database Status",
+        "operationId": "database_status_api_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/commands/search": {
+      "get": {
+        "summary": "Command Search",
+        "operationId": "command_search_api_commands_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CommandSearchResultRecord"
+                  },
+                  "title": "Response Command Search Api Commands Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "summary": "Global Search",
+        "operationId": "global_search_api_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GlobalSearchResultRecord"
+                  },
+                  "title": "Response Global Search Api Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diagnostics/runs": {
+      "get": {
+        "summary": "Diagnostics Runs",
+        "operationId": "diagnostics_runs_api_diagnostics_runs_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DiagnosticRunRecord"
+                  },
+                  "title": "Response Diagnostics Runs Api Diagnostics Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diagnostics/trace": {
+      "get": {
+        "summary": "Diagnostics Trace",
+        "operationId": "diagnostics_trace_api_diagnostics_trace_get",
+        "parameters": [
+          {
+            "name": "ingest_run_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ingest Run Id"
+            }
+          },
+          {
+            "name": "file_hash",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "File Hash"
+            }
+          },
+          {
+            "name": "page_no",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page No"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5000,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticTracePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents": {
+      "get": {
+        "summary": "Documents",
+        "operationId": "documents_api_documents_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentSummary"
+                  },
+                  "type": "array",
+                  "title": "Response Documents Api Documents Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents/{file_hash}": {
+      "get": {
+        "summary": "Document",
+        "operationId": "document_api_documents__file_hash__get",
+        "parameters": [
+          {
+            "name": "file_hash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Hash"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents/{file_hash}/regions": {
+      "get": {
+        "summary": "Document Regions",
+        "operationId": "document_regions_api_documents__file_hash__regions_get",
+        "parameters": [
+          {
+            "name": "file_hash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Hash"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentRegionsPayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents/{file_hash}/markdown": {
+      "get": {
+        "summary": "Document Markdown",
+        "operationId": "document_markdown_api_documents__file_hash__markdown_get",
+        "parameters": [
+          {
+            "name": "file_hash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Hash"
+            }
+          },
+          {
+            "name": "markdown_engine",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "best_available_markdown",
+              "title": "Markdown Engine"
+            }
+          },
+          {
+            "name": "page_no",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page No"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentMarkdownPayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents/{file_hash}/preview-images": {
+      "get": {
+        "summary": "Document Preview Images",
+        "operationId": "document_preview_images_api_documents__file_hash__preview_images_get",
+        "parameters": [
+          {
+            "name": "file_hash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Hash"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentPreviewImagesPayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents/{file_hash}/preview-images/{variant}/{page_no}": {
+      "get": {
+        "summary": "Document Preview Image",
+        "operationId": "document_preview_image_api_documents__file_hash__preview_images__variant___page_no__get",
+        "parameters": [
+          {
+            "name": "file_hash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Hash"
+            }
+          },
+          {
+            "name": "variant",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Variant"
+            }
+          },
+          {
+            "name": "page_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Page No"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/annotation-settings": {
+      "get": {
+        "summary": "Annotation Settings",
+        "operationId": "annotation_settings_api_annotation_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationSettingsPayload"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Annotation Settings",
+        "operationId": "update_annotation_settings_api_annotation_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnotationSettingsPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationSettingsPayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents/{file_hash}/annotations/visibility": {
+      "put": {
+        "summary": "Update Annotation Visibility",
+        "operationId": "update_annotation_visibility_api_documents__file_hash__annotations_visibility_put",
+        "parameters": [
+          {
+            "name": "file_hash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Hash"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnotationVisibilityUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationVisibilityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents/{file_hash}/asset": {
+      "get": {
+        "summary": "Document Asset",
+        "operationId": "document_asset_api_documents__file_hash__asset_get",
+        "parameters": [
+          {
+            "name": "file_hash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Hash"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents/{file_hash}/pdf": {
+      "get": {
+        "summary": "Document Pdf",
+        "operationId": "document_pdf_api_documents__file_hash__pdf_get",
+        "parameters": [
+          {
+            "name": "file_hash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "File Hash"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnnotationSettingsPayload": {
+        "properties": {
+          "settings": {
+            "items": {
+              "$ref": "#/components/schemas/AnnotationStyleSetting"
+            },
+            "type": "array",
+            "title": "Settings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "settings"
+        ],
+        "title": "AnnotationSettingsPayload"
+      },
+      "AnnotationStyle": {
+        "properties": {
+          "stroke_color": {
+            "type": "string",
+            "title": "Stroke Color"
+          },
+          "fill_color": {
+            "type": "string",
+            "title": "Fill Color"
+          },
+          "stroke_opacity": {
+            "type": "number",
+            "title": "Stroke Opacity",
+            "default": 0.82
+          },
+          "fill_opacity": {
+            "type": "number",
+            "title": "Fill Opacity",
+            "default": 0.14
+          },
+          "stroke_width": {
+            "type": "number",
+            "title": "Stroke Width",
+            "default": 2.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "stroke_color",
+          "fill_color"
+        ],
+        "title": "AnnotationStyle"
+      },
+      "AnnotationStyleSetting": {
+        "properties": {
+          "annotation_engine": {
+            "type": "string",
+            "title": "Annotation Engine"
+          },
+          "region_kind": {
+            "type": "string",
+            "title": "Region Kind"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "default": ""
+          },
+          "style": {
+            "$ref": "#/components/schemas/AnnotationStyle"
+          }
+        },
+        "type": "object",
+        "required": [
+          "annotation_engine",
+          "region_kind",
+          "style"
+        ],
+        "title": "AnnotationStyleSetting"
+      },
+      "AnnotationVisibilityOverride": {
+        "properties": {
+          "overlay_id": {
+            "type": "string",
+            "title": "Overlay Id"
+          },
+          "hidden": {
+            "type": "boolean",
+            "title": "Hidden"
+          }
+        },
+        "type": "object",
+        "required": [
+          "overlay_id",
+          "hidden"
+        ],
+        "title": "AnnotationVisibilityOverride"
+      },
+      "AnnotationVisibilityResponse": {
+        "properties": {
+          "updated": {
+            "type": "integer",
+            "title": "Updated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "updated"
+        ],
+        "title": "AnnotationVisibilityResponse"
+      },
+      "AnnotationVisibilityUpdate": {
+        "properties": {
+          "overrides": {
+            "items": {
+              "$ref": "#/components/schemas/AnnotationVisibilityOverride"
+            },
+            "type": "array",
+            "title": "Overrides"
+          }
+        },
+        "type": "object",
+        "required": [
+          "overrides"
+        ],
+        "title": "AnnotationVisibilityUpdate"
+      },
+      "CommandActionRecord": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route"
+          },
+          "search": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Search"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "CommandActionRecord"
+      },
+      "CommandSearchResultRecord": {
+        "properties": {
+          "command_id": {
+            "type": "string",
+            "title": "Command Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "group": {
+            "type": "string",
+            "title": "Group"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "action": {
+            "$ref": "#/components/schemas/CommandActionRecord"
+          },
+          "highlights": {
+            "items": {
+              "$ref": "#/components/schemas/SearchHighlightRecord"
+            },
+            "type": "array",
+            "title": "Highlights"
+          },
+          "shortcut": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shortcut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "command_id",
+          "label",
+          "description",
+          "group",
+          "score",
+          "action"
+        ],
+        "title": "CommandSearchResultRecord"
+      },
+      "DatabaseStatusResponse": {
+        "properties": {
+          "db_path": {
+            "type": "string",
+            "title": "Db Path"
+          },
+          "schema_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Version"
+          },
+          "files": {
+            "type": "integer",
+            "title": "Files",
+            "default": 0
+          },
+          "chunks": {
+            "type": "integer",
+            "title": "Chunks",
+            "default": 0
+          },
+          "regions": {
+            "type": "integer",
+            "title": "Regions",
+            "default": 0
+          },
+          "terms": {
+            "type": "integer",
+            "title": "Terms",
+            "default": 0
+          },
+          "failed_docs": {
+            "type": "integer",
+            "title": "Failed Docs",
+            "default": 0
+          },
+          "runtime_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Id"
+          },
+          "source_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Root"
+          }
+        },
+        "type": "object",
+        "required": [
+          "db_path"
+        ],
+        "title": "DatabaseStatusResponse"
+      },
+      "DiagnosticEventRecord": {
+        "properties": {
+          "event_id": {
+            "type": "integer",
+            "title": "Event Id"
+          },
+          "trace_id": {
+            "type": "string",
+            "title": "Trace Id"
+          },
+          "span_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Span Id"
+          },
+          "ingest_run_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingest Run Id"
+          },
+          "file_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Hash"
+          },
+          "page_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page No"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": ""
+          },
+          "attributes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Attributes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "trace_id",
+          "timestamp",
+          "event_type",
+          "name",
+          "severity"
+        ],
+        "title": "DiagnosticEventRecord"
+      },
+      "DiagnosticRunRecord": {
+        "properties": {
+          "ingest_run_id": {
+            "type": "integer",
+            "title": "Ingest Run Id"
+          },
+          "source_directory": {
+            "type": "string",
+            "title": "Source Directory"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "duration_ms": {
+            "type": "number",
+            "title": "Duration Ms",
+            "default": 0.0
+          },
+          "span_count": {
+            "type": "integer",
+            "title": "Span Count",
+            "default": 0
+          },
+          "error_count": {
+            "type": "integer",
+            "title": "Error Count",
+            "default": 0
+          },
+          "file_count": {
+            "type": "integer",
+            "title": "File Count",
+            "default": 0
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingest_run_id",
+          "source_directory",
+          "status"
+        ],
+        "title": "DiagnosticRunRecord"
+      },
+      "DiagnosticSpanRecord": {
+        "properties": {
+          "span_id": {
+            "type": "string",
+            "title": "Span Id"
+          },
+          "trace_id": {
+            "type": "string",
+            "title": "Trace Id"
+          },
+          "parent_span_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Span Id"
+          },
+          "ingest_run_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingest Run Id"
+          },
+          "file_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Hash"
+          },
+          "page_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page No"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "pipeline_step": {
+            "type": "string",
+            "title": "Pipeline Step"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "annotation_engine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annotation Engine"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "ended_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ended At"
+          },
+          "duration_ms": {
+            "type": "number",
+            "title": "Duration Ms"
+          },
+          "attributes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Attributes"
+          },
+          "error_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Type"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "error_stack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Stack"
+          }
+        },
+        "type": "object",
+        "required": [
+          "span_id",
+          "trace_id",
+          "name",
+          "pipeline_step",
+          "category",
+          "status",
+          "started_at",
+          "ended_at",
+          "duration_ms"
+        ],
+        "title": "DiagnosticSpanRecord"
+      },
+      "DiagnosticTracePayload": {
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/DiagnosticTraceSummary"
+          },
+          "spans": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticSpanRecord"
+            },
+            "type": "array",
+            "title": "Spans"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticEventRecord"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary"
+        ],
+        "title": "DiagnosticTracePayload"
+      },
+      "DiagnosticTraceSummary": {
+        "properties": {
+          "ingest_run_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingest Run Id"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "duration_ms": {
+            "type": "number",
+            "title": "Duration Ms",
+            "default": 0.0
+          },
+          "span_count": {
+            "type": "integer",
+            "title": "Span Count",
+            "default": 0
+          },
+          "error_count": {
+            "type": "integer",
+            "title": "Error Count",
+            "default": 0
+          },
+          "file_count": {
+            "type": "integer",
+            "title": "File Count",
+            "default": 0
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "DiagnosticTraceSummary"
+      },
+      "DocumentDetail": {
+        "properties": {
+          "file_hash": {
+            "type": "string",
+            "title": "File Hash"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "extension": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extension"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "modified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modified At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "docling_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docling Status"
+          },
+          "docling_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docling Error"
+          },
+          "mineru_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mineru Status"
+          },
+          "mineru_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mineru Error"
+          },
+          "lmstudio_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lmstudio Status"
+          },
+          "lmstudio_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lmstudio Error"
+          },
+          "fusion_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fusion Status"
+          },
+          "fusion_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fusion Error"
+          },
+          "chunk_count": {
+            "type": "integer",
+            "title": "Chunk Count",
+            "default": 0
+          },
+          "region_count": {
+            "type": "integer",
+            "title": "Region Count",
+            "default": 0
+          },
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/PageInfo"
+            },
+            "type": "array",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_hash",
+          "filename",
+          "size_bytes"
+        ],
+        "title": "DocumentDetail"
+      },
+      "DocumentMarkdownPayload": {
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/DocumentDetail"
+          },
+          "markdown_engine": {
+            "type": "string",
+            "title": "Markdown Engine"
+          },
+          "available_engines": {
+            "items": {
+              "$ref": "#/components/schemas/MarkdownEngineRecord"
+            },
+            "type": "array",
+            "title": "Available Engines"
+          },
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/PageMarkdownRecord"
+            },
+            "type": "array",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document",
+          "markdown_engine"
+        ],
+        "title": "DocumentMarkdownPayload"
+      },
+      "DocumentPreviewImageRecord": {
+        "properties": {
+          "file_hash": {
+            "type": "string",
+            "title": "File Hash"
+          },
+          "page_no": {
+            "type": "integer",
+            "title": "Page No"
+          },
+          "variant": {
+            "type": "string",
+            "title": "Variant"
+          },
+          "page_width": {
+            "type": "number",
+            "title": "Page Width"
+          },
+          "page_height": {
+            "type": "number",
+            "title": "Page Height"
+          },
+          "render_width": {
+            "type": "integer",
+            "title": "Render Width"
+          },
+          "render_height": {
+            "type": "integer",
+            "title": "Render Height"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          },
+          "image_bytes": {
+            "type": "integer",
+            "title": "Image Bytes"
+          },
+          "image_sha256": {
+            "type": "string",
+            "title": "Image Sha256"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_hash",
+          "page_no",
+          "variant",
+          "page_width",
+          "page_height",
+          "render_width",
+          "render_height",
+          "mime_type",
+          "image_bytes",
+          "image_sha256",
+          "url"
+        ],
+        "title": "DocumentPreviewImageRecord"
+      },
+      "DocumentPreviewImagesPayload": {
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/DocumentDetail"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentPreviewImageRecord"
+            },
+            "type": "array",
+            "title": "Images"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document"
+        ],
+        "title": "DocumentPreviewImagesPayload"
+      },
+      "DocumentRegionsPayload": {
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/DocumentDetail"
+          },
+          "overlays": {
+            "items": {
+              "$ref": "#/components/schemas/OverlayBox"
+            },
+            "type": "array",
+            "title": "Overlays"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document",
+          "overlays"
+        ],
+        "title": "DocumentRegionsPayload"
+      },
+      "DocumentSummary": {
+        "properties": {
+          "file_hash": {
+            "type": "string",
+            "title": "File Hash"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "extension": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extension"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "modified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modified At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "docling_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docling Status"
+          },
+          "docling_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docling Error"
+          },
+          "mineru_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mineru Status"
+          },
+          "mineru_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mineru Error"
+          },
+          "lmstudio_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lmstudio Status"
+          },
+          "lmstudio_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lmstudio Error"
+          },
+          "fusion_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fusion Status"
+          },
+          "fusion_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fusion Error"
+          },
+          "chunk_count": {
+            "type": "integer",
+            "title": "Chunk Count",
+            "default": 0
+          },
+          "region_count": {
+            "type": "integer",
+            "title": "Region Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_hash",
+          "filename",
+          "size_bytes"
+        ],
+        "title": "DocumentSummary"
+      },
+      "GlobalSearchResultRecord": {
+        "properties": {
+          "result_id": {
+            "type": "string",
+            "title": "Result Id"
+          },
+          "source_type": {
+            "type": "string",
+            "title": "Source Type"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "snippet": {
+            "type": "string",
+            "title": "Snippet"
+          },
+          "route": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Route"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "rank_source": {
+            "type": "string",
+            "title": "Rank Source"
+          },
+          "navigation_granularity": {
+            "type": "string",
+            "enum": [
+              "word",
+              "region",
+              "chunk",
+              "file",
+              "record"
+            ],
+            "title": "Navigation Granularity"
+          },
+          "highlights": {
+            "items": {
+              "$ref": "#/components/schemas/SearchHighlightRecord"
+            },
+            "type": "array",
+            "title": "Highlights"
+          },
+          "file_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Hash"
+          },
+          "chunk_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Id"
+          },
+          "region_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region Id"
+          },
+          "page_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page No"
+          },
+          "word_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Word Id"
+          },
+          "char_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Char Start"
+          },
+          "char_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Char End"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "result_id",
+          "source_type",
+          "source_id",
+          "label",
+          "snippet",
+          "score",
+          "rank_source",
+          "navigation_granularity"
+        ],
+        "title": "GlobalSearchResultRecord"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "ok"
+          },
+          "db_path": {
+            "type": "string",
+            "title": "Db Path"
+          },
+          "runtime_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Id"
+          },
+          "source_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Root"
+          }
+        },
+        "type": "object",
+        "required": [
+          "db_path"
+        ],
+        "title": "HealthResponse"
+      },
+      "MarkdownEngineRecord": {
+        "properties": {
+          "markdown_engine": {
+            "type": "string",
+            "title": "Markdown Engine"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "markdown_provider": {
+            "type": "string",
+            "title": "Markdown Provider",
+            "default": ""
+          },
+          "markdown_model": {
+            "type": "string",
+            "title": "Markdown Model",
+            "default": ""
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count",
+            "default": 0
+          },
+          "is_virtual": {
+            "type": "boolean",
+            "title": "Is Virtual",
+            "default": false
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "markdown_engine",
+          "label"
+        ],
+        "title": "MarkdownEngineRecord"
+      },
+      "MarkdownRegionSpan": {
+        "properties": {
+          "anchor_id": {
+            "type": "string",
+            "title": "Anchor Id"
+          },
+          "region_id": {
+            "type": "string",
+            "title": "Region Id"
+          },
+          "char_start": {
+            "type": "integer",
+            "title": "Char Start"
+          },
+          "char_end": {
+            "type": "integer",
+            "title": "Char End"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "markdown_excerpt": {
+            "type": "string",
+            "title": "Markdown Excerpt",
+            "default": ""
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "anchor_id",
+          "region_id",
+          "char_start",
+          "char_end"
+        ],
+        "title": "MarkdownRegionSpan"
+      },
+      "NormalizedBBox": {
+        "properties": {
+          "left_pct": {
+            "type": "number",
+            "title": "Left Pct"
+          },
+          "top_pct": {
+            "type": "number",
+            "title": "Top Pct"
+          },
+          "width_pct": {
+            "type": "number",
+            "title": "Width Pct"
+          },
+          "height_pct": {
+            "type": "number",
+            "title": "Height Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "left_pct",
+          "top_pct",
+          "width_pct",
+          "height_pct"
+        ],
+        "title": "NormalizedBBox"
+      },
+      "OverlayBox": {
+        "properties": {
+          "overlay_id": {
+            "type": "string",
+            "title": "Overlay Id"
+          },
+          "file_hash": {
+            "type": "string",
+            "title": "File Hash"
+          },
+          "annotation_engine": {
+            "type": "string",
+            "title": "Annotation Engine",
+            "default": "docling"
+          },
+          "annotation_provider": {
+            "type": "string",
+            "title": "Annotation Provider",
+            "default": "local-docling"
+          },
+          "annotation_model": {
+            "type": "string",
+            "title": "Annotation Model",
+            "default": "docling"
+          },
+          "chunk_id": {
+            "type": "integer",
+            "title": "Chunk Id"
+          },
+          "chunk_index": {
+            "type": "integer",
+            "title": "Chunk Index"
+          },
+          "page_no": {
+            "type": "integer",
+            "title": "Page No"
+          },
+          "raw_bbox": {
+            "$ref": "#/components/schemas/RawBBox"
+          },
+          "bbox": {
+            "$ref": "#/components/schemas/NormalizedBBox"
+          },
+          "source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ref"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "region_kind": {
+            "type": "string",
+            "title": "Region Kind",
+            "default": "text"
+          },
+          "text_preview": {
+            "type": "string",
+            "title": "Text Preview"
+          },
+          "hidden": {
+            "type": "boolean",
+            "title": "Hidden",
+            "default": false
+          },
+          "style": {
+            "$ref": "#/components/schemas/AnnotationStyle"
+          }
+        },
+        "type": "object",
+        "required": [
+          "overlay_id",
+          "file_hash",
+          "chunk_id",
+          "chunk_index",
+          "page_no",
+          "raw_bbox",
+          "bbox",
+          "text_preview",
+          "style"
+        ],
+        "title": "OverlayBox"
+      },
+      "PageInfo": {
+        "properties": {
+          "page_no": {
+            "type": "integer",
+            "title": "Page No"
+          },
+          "width": {
+            "type": "number",
+            "title": "Width"
+          },
+          "height": {
+            "type": "number",
+            "title": "Height"
+          }
+        },
+        "type": "object",
+        "required": [
+          "page_no",
+          "width",
+          "height"
+        ],
+        "title": "PageInfo"
+      },
+      "PageMarkdownRecord": {
+        "properties": {
+          "page_no": {
+            "type": "integer",
+            "title": "Page No"
+          },
+          "markdown_engine": {
+            "type": "string",
+            "title": "Markdown Engine"
+          },
+          "markdown_provider": {
+            "type": "string",
+            "title": "Markdown Provider"
+          },
+          "markdown_model": {
+            "type": "string",
+            "title": "Markdown Model"
+          },
+          "markdown_text": {
+            "type": "string",
+            "title": "Markdown Text"
+          },
+          "page_width": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Width"
+          },
+          "page_height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Height"
+          },
+          "render_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Render Sha256"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          },
+          "mappings": {
+            "items": {
+              "$ref": "#/components/schemas/MarkdownRegionSpan"
+            },
+            "type": "array",
+            "title": "Mappings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "page_no",
+          "markdown_engine",
+          "markdown_provider",
+          "markdown_model",
+          "markdown_text"
+        ],
+        "title": "PageMarkdownRecord"
+      },
+      "RawBBox": {
+        "properties": {
+          "left": {
+            "type": "number",
+            "title": "Left"
+          },
+          "top": {
+            "type": "number",
+            "title": "Top"
+          },
+          "right": {
+            "type": "number",
+            "title": "Right"
+          },
+          "bottom": {
+            "type": "number",
+            "title": "Bottom"
+          },
+          "coord_origin": {
+            "type": "string",
+            "title": "Coord Origin",
+            "default": "BOTTOMLEFT"
+          }
+        },
+        "type": "object",
+        "required": [
+          "left",
+          "top",
+          "right",
+          "bottom"
+        ],
+        "title": "RawBBox"
+      },
+      "SearchHighlightRecord": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "start": {
+            "type": "integer",
+            "title": "Start"
+          },
+          "end": {
+            "type": "integer",
+            "title": "End"
+          },
+          "match_kind": {
+            "type": "string",
+            "title": "Match Kind"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "exact_phrase",
+              "exact_token",
+              "fuzzy_alignment",
+              "fts_term",
+              "region_fallback",
+              "chunk_fallback"
+            ],
+            "title": "Source"
+          },
+          "score_contribution": {
+            "type": "number",
+            "title": "Score Contribution",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "start",
+          "end",
+          "match_kind",
+          "source"
+        ],
+        "title": "SearchHighlightRecord"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

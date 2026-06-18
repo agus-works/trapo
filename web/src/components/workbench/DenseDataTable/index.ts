@@ -1,0 +1,1 @@
+export { DenseDataTable } from './DenseDataTable';

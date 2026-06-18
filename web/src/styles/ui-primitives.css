@@ -1,0 +1,268 @@
+.workbenchPane {
+  display: grid;
+  grid-template-rows: 34px minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--panel);
+  color: var(--foreground);
+}
+
+.paneHeader,
+.graphTopBar,
+.documentTopBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.paneHeader {
+  min-height: 34px;
+  padding: 0 8px 0 10px;
+  background: var(--pane-header);
+  color: var(--foreground);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.paneHeader > div,
+.paneHeaderActions,
+.graphHeaderActions,
+.documentTopActions,
+.documentTopStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.paneHeader button,
+.graphHeaderActions button,
+.documentTopActions button {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+}
+
+.paneHeader button:hover,
+.graphHeaderActions button:hover,
+.documentTopActions button:hover {
+  border-color: var(--border-strong);
+  background: var(--list-hover-background);
+}
+
+.resizeHandle {
+  position: relative;
+  flex: 0 0 5px;
+  background: transparent;
+  cursor: col-resize;
+  outline: none;
+  touch-action: none;
+  z-index: 2;
+}
+
+.resizeHandle::before {
+  position: absolute;
+  content: "";
+  background: var(--sash-border);
+  transition:
+    background 120ms ease,
+    height 120ms ease,
+    width 120ms ease;
+}
+
+.resizeHandle.vertical {
+  width: 5px;
+}
+
+.resizeHandle.vertical::before {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+}
+
+.resizeHandle.horizontal {
+  height: 5px;
+  cursor: row-resize;
+}
+
+.resizeHandle.horizontal::before {
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.resizeHandle[data-resize-handle-active]::before,
+.resizeHandle:focus-visible::before,
+.resizeHandle:hover::before {
+  background: var(--sash-active);
+}
+
+.resizeHandle.vertical[data-resize-handle-active]::before,
+.resizeHandle.vertical:focus-visible::before,
+.resizeHandle.vertical:hover::before {
+  width: 4px;
+}
+
+.resizeHandle.horizontal[data-resize-handle-active]::before,
+.resizeHandle.horizontal:focus-visible::before,
+.resizeHandle.horizontal:hover::before {
+  height: 4px;
+}
+
+.scrollArea {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.scrollAreaViewport {
+  width: 100%;
+  height: 100%;
+}
+
+.scrollAreaScrollbar {
+  display: flex;
+  width: 10px;
+  touch-action: none;
+  user-select: none;
+}
+
+.scrollAreaScrollbar.horizontal {
+  width: auto;
+  height: 10px;
+}
+
+.scrollAreaThumb {
+  flex: 1;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--border-strong);
+  background-clip: content-box;
+}
+
+.scrollAreaCorner {
+  background: transparent;
+}
+
+.paneScroll {
+  background: var(--panel);
+}
+
+.uiButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 9px;
+  background: var(--input-background);
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.uiButton:hover {
+  background: var(--list-hover-background);
+}
+
+.uiButton-ghost {
+  border-color: transparent;
+  background: transparent;
+}
+
+.uiButton-outline {
+  background: transparent;
+}
+
+.uiButton-icon {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+}
+
+.uiButton-sm {
+  min-height: 26px;
+  padding: 2px 7px;
+}
+
+.uiInput,
+.searchBox input,
+.searchField input,
+.numberControl input,
+.pdfToolbar input,
+.denseTablePager select,
+.timelineTablePane select,
+.pdfToolbar select,
+.assetPreviewToolbar select {
+  min-height: 28px;
+  border: 1px solid var(--input-border);
+  border-radius: 0;
+  padding: 3px 7px;
+  background: var(--input-background);
+  color: var(--foreground);
+  font-size: 13px;
+  outline: none;
+}
+
+.searchControl .uiInput {
+  border: 0;
+  background: transparent;
+}
+
+.uiInput:focus,
+.searchBox input:focus,
+.searchField input:focus,
+.numberControl input:focus,
+.pdfToolbar input:focus,
+select:focus {
+  border-color: var(--accent);
+}
+
+.searchField {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  border: 1px solid var(--input-border);
+  border-radius: 0;
+  padding: 0 8px;
+  background: var(--input-background);
+  color: var(--muted);
+}
+
+.searchField input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.tooltipContent {
+  z-index: 50;
+  max-width: 260px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  background: var(--panel);
+  color: var(--foreground);
+  font-size: 12px;
+  box-shadow: var(--shadow);
+}

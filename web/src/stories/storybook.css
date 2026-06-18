@@ -1,0 +1,111 @@
+.storybookCanvas {
+  min-height: 100vh;
+  padding: 24px;
+  overflow: auto;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px)
+    0 0 / 48px 48px,
+    linear-gradient(0deg, color-mix(in srgb, var(--border) 35%, transparent) 1px, transparent 1px) 0
+    0 / 48px 48px,
+    var(--background);
+  color: var(--foreground);
+}
+
+.storybookFrame {
+  display: grid;
+  gap: 14px;
+  max-width: 1160px;
+}
+
+.storybookFrame[data-width="narrow"] {
+  max-width: 560px;
+}
+
+.storybookFrame[data-width="wide"] {
+  max-width: 1440px;
+}
+
+.storybookTitle {
+  display: grid;
+  gap: 3px;
+}
+
+.storybookTitle h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.storybookTitle p {
+  max-width: 780px;
+  margin: 0;
+  color: var(--muted);
+}
+
+.storybookSurface {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.storybookGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.storybookStack {
+  display: grid;
+  gap: 10px;
+}
+
+.storybookRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.storybookDemoBox {
+  display: grid;
+  place-items: center;
+  min-height: 90px;
+  border: 1px dashed var(--border-strong);
+  background: var(--background);
+  color: var(--muted);
+}
+
+.storybookViewportTall {
+  height: 560px;
+  min-height: 0;
+}
+
+.storybookViewportMedium {
+  height: 360px;
+  min-height: 0;
+}
+
+.storybookInventory {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.storybookInventory section {
+  border: 1px solid var(--border);
+  padding: 12px;
+  background: var(--panel);
+}
+
+.storybookInventory h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.storybookInventory ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}

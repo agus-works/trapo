@@ -1,0 +1,33 @@
+.tabs {
+  display: flex;
+  align-items: stretch;
+  min-height: 35px;
+  border-bottom: 1px solid var(--border);
+  background: var(--pane-header);
+}
+
+.tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 88px;
+  border: 0;
+  border-top: 1px solid transparent;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.tabs button:hover {
+  background: var(--list-hover-background);
+  color: var(--foreground);
+}
+
+.tabs button.active {
+  border-top-color: var(--tab-active-border-top);
+  background: var(--background);
+  color: var(--foreground);
+}
