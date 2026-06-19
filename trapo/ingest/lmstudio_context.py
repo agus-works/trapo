@@ -36,6 +36,12 @@ class LmStudioContextInfo:
         )
 
 
+@dataclass(frozen=True)
+class LoadedLmStudioModel:
+    model: str
+    instance_id: str | None = None
+
+
 def resolve_markdown_max_tokens(
     *,
     requested_tokens: int,
@@ -254,19 +260,22 @@ def _unload_other_loaded_models(
             _log(
                 log,
                 "LM Studio other-model unload failed: "
-                f"model={loaded_model} error={_error_detail(exc)}",
+                f"model={loaded_model.model} error={_error_detail(exc)}",
             )
         else:
-            _log(log, f"LM Studio unloaded other active model: model={loaded_model}")
+            _log(
+                log,
+                f"LM Studio unloaded other active model: model={loaded_model.model}",
+            )
 
 
-def _other_loaded_models(data: object, target_model: str) -> list[str]:
+def _other_loaded_models(data: object, target_model: str) -> list[LoadedLmStudioModel]:
     if not isinstance(data, dict):
         return []
     models = data.get("models")
     if not isinstance(models, list):
         return []
-    loaded: list[str] = []
+    loaded: list[LoadedLmStudioModel] = []
     for item in models:
         if not isinstance(item, dict) or not _is_loaded_model(item):
             continue
@@ -275,8 +284,30 @@ def _other_loaded_models(data: object, target_model: str) -> list[str]:
             continue
         model_key = _model_key(item)
         if model_key is not None:
-            loaded.append(model_key)
+            loaded.extend(_loaded_model_instances(item, model_key))
     return loaded
+
+
+def _loaded_model_instances(
+    item: dict[str, Any], model_key: str
+) -> list[LoadedLmStudioModel]:
+    instances = item.get("loaded_instances")
+    loaded: list[LoadedLmStudioModel] = []
+    if isinstance(instances, list):
+        for instance in instances:
+            instance_id = _instance_id(instance)
+            loaded.append(LoadedLmStudioModel(model=model_key, instance_id=instance_id))
+    return loaded or [LoadedLmStudioModel(model=model_key)]
+
+
+def _instance_id(value: object) -> str | None:
+    if not isinstance(value, dict):
+        return None
+    for key in ("instance_id", "id", "identifier"):
+        candidate = value.get(key)
+        if isinstance(candidate, str) and candidate:
+            return candidate
+    return None
 
 
 def _is_loaded_model(item: dict[str, Any]) -> bool:
@@ -307,12 +338,17 @@ def _model_keys(item: dict[str, Any]) -> set[str]:
 def _unload_model(
     client: _HttpClient,
     native_base_url: str,
-    model: str,
+    loaded_model: LoadedLmStudioModel,
 ) -> dict[str, Any]:
+    payload = (
+        {"instance_id": loaded_model.instance_id}
+        if loaded_model.instance_id
+        else {"model": loaded_model.model}
+    )
     response = client.post(
         f"{native_base_url}/api/v1/models/unload",
         headers=_headers(),
-        json={"model": model},
+        json=payload,
     )
     response.raise_for_status()
     data = response.json()

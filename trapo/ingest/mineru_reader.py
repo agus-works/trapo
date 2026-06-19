@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from loguru import logger as loguru_logger
+
 from trapo.filesystem_safety import read_text_file
 from trapo.ingest.options import DEFAULT_MINERU_PROCESSING_WINDOW_SIZE
 from trapo.logging_filters import suppress_noisy_pdf_stderr
@@ -140,13 +142,30 @@ def _mineru_processing_window(processing_window_size: int) -> Iterator[None]:
     previous = os.environ.get(MINERU_PROCESSING_WINDOW_ENV)
     os.environ[MINERU_PROCESSING_WINDOW_ENV] = str(max(1, processing_window_size))
     try:
-        with suppress_noisy_pdf_stderr():
+        with suppress_noisy_pdf_stderr(), _suppress_mineru_loguru():
             yield
     finally:
         if previous is None:
             os.environ.pop(MINERU_PROCESSING_WINDOW_ENV, None)
         else:
             os.environ[MINERU_PROCESSING_WINDOW_ENV] = previous
+
+
+@contextmanager
+def _suppress_mineru_loguru() -> Iterator[None]:
+    core = getattr(loguru_logger, "_core", None)
+    previous_activation = (
+        list(getattr(core, "activation_list", [])) if core is not None else None
+    )
+
+    loguru_logger.disable("mineru")
+    try:
+        yield
+    finally:
+        if core is not None and previous_activation is not None:
+            core.activation_list = previous_activation
+        else:
+            loguru_logger.enable("mineru")
 
 
 def _collect_output(output_dir: Path, stem: str) -> dict[str, Any]:

@@ -87,6 +87,38 @@ def test_ensure_lmstudio_max_context_unloads_other_active_models() -> None:
             "models": [
                 {
                     "key": "other/model",
+                    "loaded_instances": [
+                        {
+                            "instance_id": "other-instance",
+                            "load_config": {"context_length": 4096},
+                        }
+                    ],
+                },
+                {
+                    "key": "google/gemma-4-26b-a4b-qat",
+                    "max_context_length": CONTEXT_TOKENS,
+                    "loaded_instances": [
+                        {"load_config": {"context_length": CONTEXT_TOKENS}}
+                    ],
+                },
+            ]
+        },
+        load_response={},
+    )
+
+    info = ensure_lmstudio_max_context(http_client=client)
+
+    assert info.load_status == "already_max"
+    assert client.unload_payloads == [{"instance_id": "other-instance"}]
+    assert client.post_payloads == []
+
+
+def test_ensure_lmstudio_max_context_unload_falls_back_to_model_key() -> None:
+    client = _FakeContextClient(
+        model_info={
+            "models": [
+                {
+                    "key": "other/model",
                     "loaded_instances": [{"load_config": {"context_length": 4096}}],
                 },
                 {

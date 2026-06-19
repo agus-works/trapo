@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import os
+import types
 from pathlib import Path
+from typing import Any, Callable, cast
+
+from loguru import logger
 
 from trapo.ingest.mineru_reader import (
     MINERU_PROCESSING_WINDOW_ENV,
@@ -12,7 +16,11 @@ from trapo.ingest.mineru_reader import (
 EXPECTED_BATCH_ITEMS = 2
 
 
-def _install_fake_mineru(monkeypatch) -> dict[str, object]:
+def _install_fake_mineru(
+    monkeypatch,
+    *,
+    on_parse: Callable[[], None] | None = None,
+) -> dict[str, object]:
     captured: dict[str, object] = {}
     suffixes: list[str] = []
 
@@ -34,6 +42,8 @@ def _install_fake_mineru(monkeypatch) -> dict[str, object]:
             captured["languages"] = list(languages)
             captured["byte_lengths"] = [len(value) for value in file_bytes]
             captured["processing_window"] = os.environ.get(MINERU_PROCESSING_WINDOW_ENV)
+            if on_parse is not None:
+                on_parse()
 
             output_root = Path(output_dir)
             for name in names:
@@ -127,3 +137,39 @@ def test_read_with_mineru_batch_scopes_processing_window(monkeypatch, tmp_path) 
 
     assert result[sample].text.startswith("markdown:")
     assert captured["processing_window"] == "3"
+
+
+def test_read_with_mineru_batch_suppresses_mineru_loguru(monkeypatch, tmp_path) -> None:
+    class RaisingSink:
+        writes = 0
+
+        def write(self, _message: str) -> None:
+            self.writes += 1
+            raise OSError(1, "Incorrect function")
+
+        def flush(self) -> None:
+            return
+
+    mineru_log_module = types.ModuleType("mineru.backend.pipeline.pipeline_analyze")
+    exec(
+        "from loguru import logger\n"
+        "def emit_loguru_record():\n"
+        "    logger.info('Pipeline processing-window multi-file run')\n",
+        mineru_log_module.__dict__,
+    )
+    sink = RaisingSink()
+    handler_id = logger.add(cast(Any, sink), catch=False)
+    try:
+        _install_fake_mineru(
+            monkeypatch,
+            on_parse=mineru_log_module.emit_loguru_record,
+        )
+        sample = tmp_path / "single.pdf"
+        sample.write_bytes(b"single-content")
+
+        result = read_with_mineru_batch([sample])
+    finally:
+        logger.remove(handler_id)
+
+    assert result[sample].text.startswith("markdown:")
+    assert sink.writes == 0
