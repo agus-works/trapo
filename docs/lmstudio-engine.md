@@ -99,7 +99,11 @@ Before ingest, Trapo queries LM Studio's native model API and loads the selected
 is preferred when available, and Trapo also keeps the table above as a guard so
 known supported models are not accidentally loaded at smaller contexts. For
 `google/gemma-4-26b-a4b-qat`, that means the load request must use `262144`
-context tokens rather than LM Studio's low default such as `4096`.
+context tokens rather than LM Studio's low default such as `2048` or `4096`.
+If LM Studio reports the target model already loaded below the known maximum,
+Trapo unloads that target instance first and then reloads it with the allowlisted
+maximum context. `infinity-parser2-flash` follows the same `262144` context
+rule.
 
 ## Why This Shape
 
@@ -142,6 +146,8 @@ context tokens rather than LM Studio's low default such as `4096`.
 - LM Studio must already be running. By default, Trapo asks LM Studio to load
   the target vision model at its maximum supported context before each
   LM Studio-backed engine step.
+- The hard-coded supported model table is a floor for known local models. Do
+  not trust a currently loaded LM Studio default like `2048` as the model max.
 - Trapo loads models at maximum context, but annotation JSON generation is
   bounded separately. The default annotation output budget is 16,384 tokens,
   followed by three compact retries on invalid or truncated JSON.

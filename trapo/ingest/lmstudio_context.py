@@ -22,6 +22,7 @@ from trapo.ingest.lmstudio_native_models import (
     resolved_lmstudio_max_context_tokens,
     unload_other_lmstudio_models,
 )
+from trapo.ingest.lmstudio_unload import unload_lmstudio_model
 
 
 @dataclass(frozen=True)
@@ -125,6 +126,8 @@ def ensure_lmstudio_max_context(  # noqa: PLR0911, PLR0913
             )
             _log(log, _summary(info))
             return info
+        if loaded_context is not None:
+            unload_lmstudio_model(client, native_base_url, model, log)
         load_response = load_lmstudio_model_at_context(
             client, native_base_url, model, max_context
         )

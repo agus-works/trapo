@@ -20,6 +20,7 @@ CONTEXT_TOKENS = DEFAULT_LMSTUDIO_CONTEXT_TOKENS
 EXPLICIT_LOWER_MARKDOWN_TOKENS = 8192
 EXPLICIT_HIGHER_MARKDOWN_TOKENS = DEFAULT_LMSTUDIO_CONTEXT_TOKENS + 1
 SMALL_CONTEXT = 4096
+LMSTUDIO_DEFAULT_CONTEXT = 2048
 OLMOCR_CONTEXT_TOKENS = 128_000
 CONTEXT_RESERVE_TOKENS = 1024
 
@@ -65,7 +66,10 @@ def test_ensure_lmstudio_max_context_uses_supported_model_floor() -> None:
                     "key": "google/gemma-4-26b-a4b-qat",
                     "max_context_length": SMALL_CONTEXT,
                     "loaded_instances": [
-                        {"load_config": {"context_length": SMALL_CONTEXT}}
+                        {
+                            "id": "gemma-low-context",
+                            "load_config": {"context_length": SMALL_CONTEXT},
+                        }
                     ],
                 }
             ]
@@ -81,9 +85,81 @@ def test_ensure_lmstudio_max_context_uses_supported_model_floor() -> None:
     assert info.max_context_tokens == CONTEXT_TOKENS
     assert info.loaded_context_tokens == SMALL_CONTEXT
     assert info.applied_context_tokens == CONTEXT_TOKENS
+    assert client.unload_payloads == [{"instance_id": "gemma-low-context"}]
     assert client.post_payloads == [
         {
             "model": "google/gemma-4-26b-a4b-qat",
+            "context_length": CONTEXT_TOKENS,
+            "echo_load_config": True,
+        }
+    ]
+
+
+def test_ensure_lmstudio_max_context_forces_known_max_when_lmstudio_reports_default_context() -> (
+    None
+):
+    client = _FakeContextClient(
+        model_info={
+            "models": [
+                {
+                    "key": "google/gemma-4-26b-a4b-qat",
+                    "max_context_length": LMSTUDIO_DEFAULT_CONTEXT,
+                    "loaded_instances": [
+                        {
+                            "id": "gemma-default-context",
+                            "load_config": {"context_length": LMSTUDIO_DEFAULT_CONTEXT},
+                        }
+                    ],
+                }
+            ]
+        },
+        load_response={
+            "status": "loaded",
+            "load_config": {"context_length": CONTEXT_TOKENS},
+        },
+    )
+
+    info = ensure_lmstudio_max_context(http_client=client)
+
+    assert info.max_context_tokens == CONTEXT_TOKENS
+    assert info.loaded_context_tokens == LMSTUDIO_DEFAULT_CONTEXT
+    assert info.applied_context_tokens == CONTEXT_TOKENS
+    assert client.unload_payloads == [{"instance_id": "gemma-default-context"}]
+    assert client.post_payloads == [
+        {
+            "model": "google/gemma-4-26b-a4b-qat",
+            "context_length": CONTEXT_TOKENS,
+            "echo_load_config": True,
+        }
+    ]
+
+
+def test_ensure_lmstudio_max_context_forces_infinity_parser_known_max() -> None:
+    client = _FakeContextClient(
+        model_info={
+            "models": [
+                {
+                    "key": "infinity-parser2-flash",
+                    "loaded_instances": [],
+                }
+            ]
+        },
+        load_response={
+            "status": "loaded",
+            "load_config": {"context_length": CONTEXT_TOKENS},
+        },
+    )
+
+    info = ensure_lmstudio_max_context(
+        model="infinity-parser2-flash",
+        http_client=client,
+    )
+
+    assert info.max_context_tokens == CONTEXT_TOKENS
+    assert info.applied_context_tokens == CONTEXT_TOKENS
+    assert client.post_payloads == [
+        {
+            "model": "infinity-parser2-flash",
             "context_length": CONTEXT_TOKENS,
             "echo_load_config": True,
         }

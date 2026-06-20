@@ -114,10 +114,12 @@ Trapo does a best-effort preflight:
 2. Read model metadata from `/api/v1/models`.
 3. Best-effort unload any other active model reported by LM Studio.
 4. Find the configured model and read `max_context_length`.
-5. If the model is not already loaded at that context, call
+5. If the model is already loaded below the known maximum context, unload that
+     target instance so LM Studio cannot reuse a low-context load.
+6. If the model is not already loaded at the maximum context, call
      `/api/v1/models/load` with `context_length = max_context_length` and
      `echo_load_config = true`.
-6. Use the detected/applied context for subsequent LM Studio chat calls.
+7. Use the detected/applied context for subsequent LM Studio chat calls.
 
 This can reload the model and may unload other active LM Studio models. Use
 `--lmstudio-no-max-context` to skip this preflight.
@@ -131,10 +133,11 @@ flowchart TD
         E --> F[Read max_context_length]
         F --> G{Loaded at max already?}
         G -->|Yes| H[Use loaded context]
-        G -->|No| I[POST /api/v1/models/load]
-        I --> J[Apply max context]
+        G -->|No| I[Unload target if loaded below max]
+        I --> J[POST /api/v1/models/load]
+        J --> L[Apply max context]
         H --> K[Context info for LM Studio calls]
-        J --> K
+        L --> K
 ```
 
 For the local `google/gemma-4-26b-a4b-qat` model, LM Studio reports:
@@ -142,6 +145,11 @@ For the local `google/gemma-4-26b-a4b-qat` model, LM Studio reports:
 ```text
 max_context_length = 262144
 ```
+
+The local `infinity-parser2-flash` LM Studio model is also allowlisted at
+`262144` context tokens. Trapo keeps these known values in
+`trapo/ingest/lmstudio_supported_models.py` and uses them as a floor even when
+LM Studio reports a smaller currently loaded context.
 
 The current Trapo preflight log looks like this when successful:
 
