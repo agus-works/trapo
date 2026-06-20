@@ -40,6 +40,7 @@ from trapo.document_markdown import (
 from trapo.lmstudio_pages import extract_lmstudio_pages
 from trapo.observability import instrument_fastapi_app
 from trapo.page_orientation import read_page_rotation_degrees
+from trapo.preview_cache import read_document_preview_images
 from trapo.search import (
     CommandAction,
     CommandSearchResult,
@@ -517,6 +518,8 @@ def _document_detail(con: DuckConnection, file_hash: str) -> DocumentDetail:
             [file_hash],
         ).fetchone()
         pages = extract_lmstudio_pages(lmstudio_json[0] if lmstudio_json else None)
+    if not pages:
+        pages = _preview_cache_pages(con, file_hash)
     return DocumentDetail(**summary.model_dump(), pages=pages)
 
 
@@ -528,6 +531,18 @@ def _image_preview_pages(
     rotation_degrees = read_page_rotation_degrees(con, summary.file_hash, page_no=1)
     image_page = image_page_info(Path(summary.path), rotation_degrees=rotation_degrees)
     return [image_page] if image_page is not None else []
+
+
+def _preview_cache_pages(con: DuckConnection, file_hash: str) -> list[PageInfo]:
+    images = read_document_preview_images(con, file_hash, variant="normalized")
+    return [
+        PageInfo(
+            page_no=image.page_no,
+            width=float(image.render_width),
+            height=float(image.render_height),
+        )
+        for image in images
+    ]
 
 
 def _document_regions(con: DuckConnection, file_hash: str) -> DocumentRegionsPayload:

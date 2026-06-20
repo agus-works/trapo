@@ -177,6 +177,13 @@ def _generate_markdown_engine(  # noqa: PLR0911, PLR0913
             )
             return markdown_summary
         if markdown_engine == INFINITY_MARKDOWN_ENGINE:
+            infinity_options = InfinityOptions(
+                model=options.infinity_model,
+                backend=options.infinity_backend,
+                batch_size=options.infinity_batch_size,
+                device=options.infinity_device,
+                torch_dtype=options.infinity_torch_dtype,
+            )
             markdown_summary = _process_infinity_markdown(
                 connection,
                 path,
@@ -192,7 +199,7 @@ def _generate_markdown_engine(  # noqa: PLR0911, PLR0913
                     ingest_run_id=run_id,
                     markdown_engine=markdown_engine,
                     markdown_provider=INFINITY_PROVIDER,
-                    markdown_model=options.infinity_model,
+                    markdown_model=infinity_options.model,
                     status="ok" if error_count == 0 else "partial",
                     page_count=markdown_summary.page_count,
                     error=f"{error_count} page(s) failed" if error_count else None,
@@ -202,6 +209,7 @@ def _generate_markdown_engine(  # noqa: PLR0911, PLR0913
                         "errors": markdown_summary.errors or [],
                         "backend": options.infinity_backend,
                         "batch_size": options.infinity_batch_size,
+                        "requested_model": options.infinity_model,
                     },
                 ),
             )
@@ -302,18 +310,21 @@ def _process_infinity_markdown(  # noqa: PLR0913
         device=options.infinity_device,
         torch_dtype=options.infinity_torch_dtype,
     )
+    resolved_model = infinity_options.model
     with traced_span(
         "trapo.ingest.page_markdown",
         attributes={
             "file.hash": file_hash,
             "markdown.engine": INFINITY_MARKDOWN_ENGINE,
-            "infinity.model": options.infinity_model,
+            "infinity.model": resolved_model,
             "infinity.backend": options.infinity_backend,
             "markdown.render_dpi": options.page_markdown_render_dpi,
             "markdown.image_max_side": options.page_markdown_image_max_side,
         },
     ) as markdown_span:
-        page_images = list(iter_markdown_page_images(path, options=render_options, log=log))
+        page_images = list(
+            iter_markdown_page_images(path, options=render_options, log=log)
+        )
         outputs = read_page_markdown_with_infinity(
             page_images,
             source_path=path,
@@ -342,14 +353,15 @@ def _process_infinity_markdown(  # noqa: PLR0913
                 page_no=int(output["page_no"]),
                 markdown_engine=INFINITY_MARKDOWN_ENGINE,
                 markdown_provider=INFINITY_PROVIDER,
-                markdown_model=options.infinity_model,
+                markdown_model=resolved_model,
                 markdown_text=markdown_text,
                 page_width=_float_or_none(output.get("width")),
                 page_height=_float_or_none(output.get("height")),
                 render_sha256=str(output.get("render_sha256") or ""),
                 metadata={
                     "source": "infinity_parser2_page_markdown",
-                    "model": options.infinity_model,
+                    "model": resolved_model,
+                    "requested_model": options.infinity_model,
                     "backend": options.infinity_backend,
                     "render_width": output.get("render_width"),
                     "render_height": output.get("render_height"),

@@ -3,8 +3,9 @@ from __future__ import annotations
 import importlib
 import time
 from collections.abc import Callable, Iterable
+from functools import lru_cache
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any
 
 from trapo.ingest.infinity_models import (
     INFINITY_ENGINE,
@@ -13,14 +14,12 @@ from trapo.ingest.infinity_models import (
     InfinityOptions,
     InfinityParseResult,
 )
+from trapo.ingest.infinity_lmstudio import LmStudioInfinityParser
+from trapo.ingest.infinity_retry import InfinityParserProtocol, retry_batch_as_pages
 from trapo.ingest.normalized_pages import NormalizedPreviewPage
 from trapo.ingest.page_markdown_types import MarkdownPageImage
 from trapo.ingest.infinity_uvx import UvxInfinityParser
 from trapo.server.provenance import parse_json_value
-
-
-class InfinityParserProtocol(Protocol):
-    def parse(self, source: object, **kwargs: Any) -> object: ...
 
 
 def read_regions_with_infinity(
@@ -143,27 +142,27 @@ def _parse_pages(  # noqa: PLR0913
                 f"task={task_type} pages={len(batch)} elapsed={elapsed:.2f}s",
             )
         except Exception as exc:
-            elapsed = time.perf_counter() - started_at
-            for path in batch:
-                outputs.append(
-                    {
-                        "status": "error",
-                        "task_type": task_type,
-                        "path": str(path),
-                        "elapsed_seconds": elapsed,
-                        "error_type": type(exc).__name__,
-                        "error": str(exc),
-                    }
+            outputs.extend(
+                retry_batch_as_pages(
+                    infinity,
+                    batch,
+                    task_type=task_type,
+                    output_format=output_format,
+                    batch_size=batch_size,
+                    log=log,
+                    batch_error=exc,
+                    batch_elapsed_seconds=time.perf_counter() - started_at,
+                    parse_batch=_parse_batch,
+                    batch_outputs=_batch_outputs,
                 )
-            _log(
-                log,
-                "Infinity Parser2 batch failed: "
-                f"task={task_type} pages={len(batch)} elapsed={elapsed:.2f}s error={exc}",
             )
     return outputs
 
 
+@lru_cache(maxsize=4)
 def _new_parser(options: InfinityOptions) -> InfinityParserProtocol:
+    if options.backend == "lmstudio":
+        return LmStudioInfinityParser(options)
     try:
         module = importlib.import_module("infinity_parser2")
     except Exception:
@@ -183,7 +182,6 @@ def _new_parser(options: InfinityOptions) -> InfinityParserProtocol:
 def _parse_batch(
     parser: InfinityParserProtocol,
     batch: list[Path],
-    *,
     task_type: str,
     output_format: str | None,
     batch_size: int,

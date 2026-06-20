@@ -486,6 +486,62 @@ def test_document_markdown_api_fallback_to_ocr(tmp_path) -> None:
     assert payload["pages"][0]["metadata"]["source_engine"] == "docling"
 
 
+def test_document_regions_uses_preview_pages_without_docling_pages(tmp_path) -> None:
+    db_path = tmp_path / "trapo.duckdb"
+    pdf_path = tmp_path / "invoice.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4\n% test pdf\n%%EOF\n")
+    config = RuntimeConfig.from_env(db_path=str(db_path))
+
+    with connect(db_path) as connection:
+        apply_migrations(connection, config, create_backup=False)
+        _seed_document(connection, pdf_path)
+        connection.execute(
+            """
+            INSERT INTO document_preview_images (
+                file_hash, page_no, variant, page_width, page_height,
+                render_width, render_height, mime_type, image_bytes,
+                image_sha256, cache_path
+            )
+            VALUES (
+                'hash1', 1, 'normalized', 100.0, 200.0,
+                100, 200, 'image/jpeg', 1234,
+                'sha1', 'path1'
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO document_regions (
+                region_id, file_hash, annotation_engine, annotation_provider,
+                annotation_model, page_no, source_ref, label, text, context_text,
+                raw_bbox_json, region_kind, metadata_json
+            )
+            VALUES (
+                'infinity-region-1', 'hash1', 'infinity',
+                'local-infinity-parser2', 'infinity-parser2-flash', 1,
+                'infinity:page:1:region:0', 'text', 'Hello', 'Hello',
+                '{"left": 10, "top": 20, "right": 90, "bottom": 80}'::JSON,
+                'text', '{}'::JSON
+            )
+            """
+        )
+
+    client = TestClient(create_app(db_path))
+
+    response = client.get("/api/documents/hash1/regions")
+    assert response.status_code == HTTP_OK
+    payload = response.json()
+    assert payload["document"]["pages"] == [
+        {"page_no": 1, "width": 100.0, "height": 200.0}
+    ]
+    infinity_overlays = [
+        overlay
+        for overlay in payload["overlays"]
+        if overlay["annotation_engine"] == "infinity"
+    ]
+    assert len(infinity_overlays) == 1
+
+
 def test_annotation_settings_api_updates_overlay_style(tmp_path) -> None:
     db_path = tmp_path / "trapo.duckdb"
     pdf_path = tmp_path / "invoice.pdf"

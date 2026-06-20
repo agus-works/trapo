@@ -38,6 +38,14 @@ Defaults are `infly/Infinity-Parser2-Flash`, `vllm-engine`, batch size `1`,
 device `cuda`, and torch dtype `bfloat16`. The device and dtype options apply
 to the `transformers` backend.
 
+`--infinity-model infinity-parser2-flash` is accepted as a short alias for
+`infly/Infinity-Parser2-Flash`. Explicit Hugging Face IDs and local model paths
+are passed through unchanged.
+
+Use `--infinity-backend lmstudio` when Infinity Parser2 Flash is hosted by the
+local LM Studio OpenAI-compatible API at `http://localhost:1234/v1`. In that
+mode, the same short model alias is preserved as the LM Studio model ID.
+
 The package currently depends on a newer `transformers` line than MinerU, so it
 is not declared as a base Trapo dependency. Trapo first uses an in-process
 `infinity_parser2` import when available; otherwise it falls back to an isolated
@@ -51,6 +59,21 @@ and the local Transformers backend uses device mapping. On Windows with Python
 maps requested `vllm-engine` runs to Infinity Parser2's local `transformers`
 backend. Use `vllm-server` only when a separate compatible vLLM server is
 already running.
+
+## Error Isolation
+
+Infinity Parser2 receives Trapo-rendered JPG page artifacts instead of source
+PDFs, so page images are generated and normalized once before engine execution.
+If a multi-page Infinity batch fails, Trapo retries each page in that batch with
+the already-created parser instance and records only the failed page as an
+engine error. Successful pages in the same file still persist annotation regions
+or page Markdown.
+
+## Example
+
+```powershell
+uv sync && uv run trapo init --db quack:localhost:9494 && uv run trapo status --db quack:localhost:9494 && uv run trapo ingest "C:\Users\Bangonkali\Desktop\test\ontology-works\demo-04" --db quack:localhost:9494 --annotation-engines infinity --page-markdown-engines infinity_markdown --infinity-backend lmstudio --infinity-model infinity-parser2-flash --verbose
+```
 
 ## Caveats
 

@@ -246,9 +246,7 @@ def _delete_infinity_regions(
     )
 
 
-def _region_id(
-    file_hash: str, annotation_engine: str, region: InfinityRegion
-) -> str:
+def _region_id(file_hash: str, annotation_engine: str, region: InfinityRegion) -> str:
     key = "|".join(
         str(part)
         for part in (

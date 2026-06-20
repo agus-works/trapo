@@ -125,13 +125,14 @@ def process_infinity(  # noqa: PLR0913
         device=options.infinity_device,
         torch_dtype=options.infinity_torch_dtype,
     )
+    resolved_model = infinity_options.model
     with traced_span(
         "trapo.ingest.infinity_read",
         attributes={
             "file.hash": file_hash,
             "annotation.engine": INFINITY_ENGINE,
             "page.count": len(pages),
-            "infinity.model": options.infinity_model,
+            "infinity.model": resolved_model,
             "infinity.backend": options.infinity_backend,
             "infinity.batch_size": options.infinity_batch_size,
         },
@@ -150,10 +151,11 @@ def process_infinity(  # noqa: PLR0913
         text=read_result.text,
         output_json=read_result.data,
         reader_provider=read_result.provider,
-        reader_model=read_result.model,
+        reader_model=resolved_model,
         metadata={
             **normalized_metadata(pages),
-            "model": options.infinity_model,
+            "model": resolved_model,
+            "requested_model": options.infinity_model,
             "backend": options.infinity_backend,
             "batch_size": options.infinity_batch_size,
             "device": options.infinity_device,
@@ -169,7 +171,7 @@ def process_infinity(  # noqa: PLR0913
             connection,
             file_hash,
             read_result.data,
-            annotation_model=options.infinity_model,
+            annotation_model=resolved_model,
         )
         span_set_attributes(region_span, {"region.count": region_count})
     log(f"Stored Infinity Parser2: pages={len(pages)} regions={region_count}")

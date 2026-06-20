@@ -633,8 +633,8 @@ def _lmstudio_context_preflight(
 def _uses_lmstudio(options: IngestOptions) -> bool:
     markdown_engines = requested_markdown_engines(options)
     return (
-            "lmstudio" in _requested_engines(options.annotation_engines)
-            or "lmstudio_markdown" in markdown_engines
+        "lmstudio" in _requested_engines(options.annotation_engines)
+        or "lmstudio_markdown" in markdown_engines
         or (options.markitdown_lmstudio_ocr and "markitdown" in markdown_engines)
     )
 
@@ -758,7 +758,12 @@ def _requested_engines(value: str) -> list[str]:
         normalized = (
             INFINITY_ENGINE
             if normalized
-            in {"infinity", "infinity-parser2", "local-infinity", "local-infinity-parser2"}
+            in {
+                "infinity",
+                "infinity-parser2",
+                "local-infinity",
+                "local-infinity-parser2",
+            }
             else normalized
         )
         if normalized == "all":

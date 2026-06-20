@@ -549,7 +549,9 @@ def ingest(  # noqa: PLR0913
     ] = DEFAULT_INFINITY_BACKEND,
     infinity_batch_size: Annotated[
         int,
-        typer.Option("--infinity-batch-size", help="Infinity Parser2 parse batch size."),
+        typer.Option(
+            "--infinity-batch-size", help="Infinity Parser2 parse batch size."
+        ),
     ] = DEFAULT_INFINITY_BATCH_SIZE,
     infinity_device: Annotated[
         str,
@@ -960,7 +962,9 @@ def pipeline_read(  # noqa: PLR0913
     ] = DEFAULT_INFINITY_BACKEND,
     infinity_batch_size: Annotated[
         int,
-        typer.Option("--infinity-batch-size", help="Infinity Parser2 parse batch size."),
+        typer.Option(
+            "--infinity-batch-size", help="Infinity Parser2 parse batch size."
+        ),
     ] = DEFAULT_INFINITY_BATCH_SIZE,
     infinity_device: Annotated[
         str,
