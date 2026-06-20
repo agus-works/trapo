@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import json
+import sys
 import subprocess
 from typing import Any
 
 from trapo.ingest.infinity_models import InfinityOptions
+
+_WINDOWS_TORCH_BACKEND = "cu130"
+_DEFAULT_TORCH_BACKEND = "auto"
 
 
 class UvxInfinityParser:
@@ -23,14 +27,7 @@ class UvxInfinityParser:
             },
         }
         completed = subprocess.run(
-            [
-                "uvx",
-                "--from",
-                "infinity-parser2",
-                "python",
-                "-c",
-                UVX_SCRIPT,
-            ],
+            _uvx_command(),
             input=json.dumps(payload),
             text=True,
             capture_output=True,
@@ -42,20 +39,63 @@ class UvxInfinityParser:
         return json.loads(completed.stdout)
 
 
+def _uvx_command() -> list[str]:
+    return [
+        "uvx",
+        "--from",
+        "infinity-parser2",
+        "--with",
+        "torch",
+        "--with",
+        "torchvision",
+        "--with",
+        "accelerate",
+        "--torch-backend",
+        _torch_backend(),
+        "python",
+        "-c",
+        UVX_SCRIPT,
+    ]
+
+
+def _torch_backend() -> str:
+    if sys.platform == "win32":
+        return _WINDOWS_TORCH_BACKEND
+    return _DEFAULT_TORCH_BACKEND
+
+
 UVX_SCRIPT = r"""
 import json
 import sys
+import types
+
+if "vllm" not in sys.modules:
+    vllm_module = types.ModuleType("vllm")
+
+    class _UnavailableVllm:
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError(
+                "vLLM is unavailable in the isolated Infinity Parser2 fallback. "
+                "Use the transformers backend or run a separate vLLM server."
+            )
+
+    vllm_module.LLM = _UnavailableVllm
+    vllm_module.SamplingParams = _UnavailableVllm
+    sys.modules["vllm"] = vllm_module
 
 from infinity_parser2 import InfinityParser2
 
 payload = json.loads(sys.stdin.read())
 options = payload["options"]
 kwargs = payload["kwargs"]
+backend = options["backend"]
+if backend == "vllm-engine":
+    backend = "transformers"
 parser_kwargs = {
     "model_name": options["model"],
-    "backend": options["backend"],
+    "backend": backend,
 }
-if options["backend"] == "transformers":
+if backend == "transformers":
     parser_kwargs.update(
         {
             "device": options["device"],
@@ -66,4 +106,3 @@ parser = InfinityParser2(**parser_kwargs)
 result = parser.parse(payload["source"], **kwargs)
 print(json.dumps(result, ensure_ascii=False))
 """
-

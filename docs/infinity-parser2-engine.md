@@ -44,6 +44,14 @@ is not declared as a base Trapo dependency. Trapo first uses an in-process
 `uvx --from infinity-parser2` subprocess so the Infinity dependency set does not
 replace MinerU's pinned runtime.
 
+The isolated fallback installs `torch`, `torchvision`, and `accelerate`
+explicitly because `qwen_vl_utils` imports TorchVision during package startup
+and the local Transformers backend uses device mapping. On Windows with Python
+3.14, `vllm` does not currently have a compatible wheel chain, so the fallback
+maps requested `vllm-engine` runs to Infinity Parser2's local `transformers`
+backend. Use `vllm-server` only when a separate compatible vLLM server is
+already running.
+
 ## Caveats
 
 Infinity Parser2 currently focuses on English and Chinese documents, may degrade

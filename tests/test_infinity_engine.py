@@ -11,12 +11,14 @@ from trapo.document_markdown import INFINITY_MARKDOWN_ENGINE
 from trapo.ingest.markdown_engines import requested_markdown_engines
 from trapo.ingest.options import IngestOptions
 from trapo.ingest.pipeline import _requested_engines
+from trapo.ingest.infinity_uvx import UVX_SCRIPT, _uvx_command
 from trapo.migrations import apply_migrations
 
 PIXEL_LEFT = 1200
 PIXEL_TOP = 20
 PIXEL_RIGHT = 1400
 PIXEL_BOTTOM = 120
+INFINITY_UVX_RUNTIME_DEPENDENCY_COUNT = 3
 
 
 def test_requested_engines_all_includes_infinity() -> None:
@@ -29,6 +31,23 @@ def test_requested_markdown_engines_all_includes_infinity() -> None:
 
     assert INFINITY_MARKDOWN_ENGINE in engines
     assert engines.index(INFINITY_MARKDOWN_ENGINE) == 1
+
+
+def test_infinity_uvx_fallback_installs_vision_runtime() -> None:
+    command = _uvx_command()
+
+    assert command[:3] == ["uvx", "--from", "infinity-parser2"]
+    assert command.count("--with") == INFINITY_UVX_RUNTIME_DEPENDENCY_COUNT
+    assert "torch" in command
+    assert "torchvision" in command
+    assert "accelerate" in command
+    assert "--torch-backend" in command
+
+
+def test_infinity_uvx_fallback_uses_transformers_when_vllm_engine_requested() -> None:
+    assert 'if backend == "vllm-engine":' in UVX_SCRIPT
+    assert 'backend = "transformers"' in UVX_SCRIPT
+    assert 'sys.modules["vllm"] = vllm_module' in UVX_SCRIPT
 
 
 def test_rebuild_infinity_regions_scales_normalized_bbox(tmp_path) -> None:
@@ -94,11 +113,11 @@ def test_rebuild_infinity_regions_accepts_pixel_bbox(tmp_path) -> None:
                 "width": 900.0,
                 "height": 1200.0,
                 "result": [
-                        {
-                            "category": "formula",
-                            "bbox": [PIXEL_LEFT, PIXEL_TOP, PIXEL_RIGHT, PIXEL_BOTTOM],
-                            "text": "$$x=y$$",
-                        }
+                    {
+                        "category": "formula",
+                        "bbox": [PIXEL_LEFT, PIXEL_TOP, PIXEL_RIGHT, PIXEL_BOTTOM],
+                        "text": "$$x=y$$",
+                    }
                 ],
             }
         ]
