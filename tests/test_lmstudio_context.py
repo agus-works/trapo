@@ -19,6 +19,7 @@ CONTEXT_TOKENS = DEFAULT_LMSTUDIO_CONTEXT_TOKENS
 EXPLICIT_LOWER_MARKDOWN_TOKENS = 8192
 EXPLICIT_HIGHER_MARKDOWN_TOKENS = DEFAULT_LMSTUDIO_CONTEXT_TOKENS + 1
 SMALL_CONTEXT = 4096
+OLMOCR_CONTEXT_TOKENS = 128_000
 CONTEXT_RESERVE_TOKENS = 1024
 
 
@@ -50,6 +51,69 @@ def test_ensure_lmstudio_max_context_loads_advertised_max_when_not_loaded() -> N
         {
             "model": "google/gemma-4-26b-a4b-qat",
             "context_length": CONTEXT_TOKENS,
+            "echo_load_config": True,
+        }
+    ]
+
+
+def test_ensure_lmstudio_max_context_uses_supported_model_floor() -> None:
+    client = _FakeContextClient(
+        model_info={
+            "models": [
+                {
+                    "key": "google/gemma-4-26b-a4b-qat",
+                    "max_context_length": SMALL_CONTEXT,
+                    "loaded_instances": [
+                        {"load_config": {"context_length": SMALL_CONTEXT}}
+                    ],
+                }
+            ]
+        },
+        load_response={
+            "status": "loaded",
+            "config": {"context_length": CONTEXT_TOKENS},
+        },
+    )
+
+    info = ensure_lmstudio_max_context(http_client=client)
+
+    assert info.max_context_tokens == CONTEXT_TOKENS
+    assert info.loaded_context_tokens == SMALL_CONTEXT
+    assert info.applied_context_tokens == CONTEXT_TOKENS
+    assert client.post_payloads == [
+        {
+            "model": "google/gemma-4-26b-a4b-qat",
+            "context_length": CONTEXT_TOKENS,
+            "echo_load_config": True,
+        }
+    ]
+
+
+def test_ensure_lmstudio_max_context_accepts_v0_model_list_shape() -> None:
+    client = _FakeContextClient(
+        model_info={
+            "data": [
+                {
+                    "id": "allenai/olmocr-2-7b",
+                    "max_context_length": OLMOCR_CONTEXT_TOKENS,
+                    "state": "not-loaded",
+                }
+            ]
+        },
+        load_response={"config": {"context_length": OLMOCR_CONTEXT_TOKENS}},
+    )
+
+    info = ensure_lmstudio_max_context(
+        model="allenai/olmocr-2-7b",
+        http_client=client,
+    )
+
+    assert info.max_context_tokens == OLMOCR_CONTEXT_TOKENS
+    assert info.applied_context_tokens == OLMOCR_CONTEXT_TOKENS
+    assert client.post_payloads == [
+        {
+            "model": "allenai/olmocr-2-7b",
+            "context_length": OLMOCR_CONTEXT_TOKENS,
             "echo_load_config": True,
         }
     ]

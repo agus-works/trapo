@@ -63,6 +63,44 @@ LM Studio owns GPU loading and offload for `google/gemma-4-26b-a4b-qat`.
      call shapes, Mermaid diagrams, evidence selection rules, and PDF context
      overflow fix.
 
+## Supported Engines And Model Context
+
+Trapo supports the following LM Studio-backed generation surfaces:
+
+| Surface | Engine or option | Purpose | LM Studio model source |
+| --- | --- | --- | --- |
+| Annotation | `lmstudio` | Balanced region extraction used by default for LM Studio annotations. | `--lmstudio-model` |
+| Annotation | `lmstudio_strict` | Stricter optional prompt profile from `--lmstudio-profiles strict` or `all`. | `--lmstudio-model` |
+| Annotation | `lmstudio_recall` | Higher-recall optional prompt profile from `--lmstudio-profiles recall` or `all`. | `--lmstudio-model` |
+| Markdown | `lmstudio_markdown` | Direct page-image-to-Markdown generation. | `--lmstudio-model` |
+| Markdown OCR plugin | `markitdown` with `--markitdown-lmstudio-ocr` | MarkItDown conversion with local LM Studio OCR assistance. | `--lmstudio-model` |
+
+These surfaces require a vision-capable LM Studio model. On the local
+workstation, Trapo treats these LM Studio model IDs as supported for annotation
+and Markdown generation:
+
+| LM Studio model ID | Type | Max load context tokens |
+| --- | --- | ---: |
+| `google/gemma-4-26b-a4b-qat` | VLM | `262144` |
+| `qwen/qwen3.5-27b` | VLM | `262144` |
+| `qwen/qwen3.5-35b-a3b` | VLM | `262144` |
+| `nvidia/nemotron-3-nano-omni` | VLM | `262144` |
+| `qwen/qwen3-vl-8b` | VLM | `262144` |
+| `infinity-parser2-flash` | VLM | `262144` |
+| `qwen/qwen3-vl-30b` | VLM | `262144` |
+| `allenai/olmocr-2-7b` | VLM | `128000` |
+
+Non-vision models in the same LM Studio install, such as `granite-4.1-8b`,
+`granite-4.1-30b`, and embedding models, are not supported for these image
+annotation or image Markdown surfaces.
+
+Before ingest, Trapo queries LM Studio's native model API and loads the selected
+`--lmstudio-model` with the largest known context length. The native API value
+is preferred when available, and Trapo also keeps the table above as a guard so
+known supported models are not accidentally loaded at smaller contexts. For
+`google/gemma-4-26b-a4b-qat`, that means the load request must use `262144`
+context tokens rather than LM Studio's low default such as `4096`.
+
 ## Why This Shape
 
 - The LM Studio model can refine or challenge Docling/MinerU layout results
@@ -101,9 +139,10 @@ LM Studio owns GPU loading and offload for `google/gemma-4-26b-a4b-qat`.
 
 ## Current Caveats
 
-- LM Studio must already be running with the target vision model loaded.
+- LM Studio must already be running. By default, Trapo asks LM Studio to load
+  the target vision model at its maximum supported context before ingest.
 - GPU optimization is configured in LM Studio, not inside Trapo.
-- `--lmstudio-timeout` defaults to 900 seconds and is used as the per-page read
+- `--lmstudio-timeout` defaults to 240 seconds in the CLI and is used as the per-page read
   timeout for non-streamed generation. Trapo keeps connect, write, and pool
   waits short, so this mainly gives LM Studio enough time to finish slow vision
   pages after the request has been accepted.
