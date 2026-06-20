@@ -542,6 +542,60 @@ def test_document_regions_uses_preview_pages_without_docling_pages(tmp_path) -> 
     assert len(infinity_overlays) == 1
 
 
+def test_document_regions_normalizes_infinity_with_preview_page_metadata(
+    tmp_path,
+) -> None:
+    db_path = tmp_path / "trapo.duckdb"
+    pdf_path = tmp_path / "map.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4\n% test pdf\n%%EOF\n")
+    config = RuntimeConfig.from_env(db_path=str(db_path))
+
+    with connect(db_path) as connection:
+        apply_migrations(connection, config, create_backup=False)
+        _seed_document(connection, pdf_path)
+        connection.execute(
+            """
+            UPDATE docling_documents
+            SET docling_json =
+                '{"pages": {"1": {"page_no": 1, "size": {"width": 3482, "height": 2612}}}}'::JSON
+            WHERE file_hash = 'hash1'
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO document_regions (
+                region_id, file_hash, annotation_engine, annotation_provider,
+                annotation_model, page_no, source_ref, label, text, context_text,
+                raw_bbox_json, region_kind, metadata_json
+            )
+            VALUES (
+                'infinity-region-1', 'hash1', 'infinity',
+                'local-infinity-parser2', 'infinity-parser2-flash', 1,
+                'infinity:page:1:region:0', 'figure', 'figure', 'figure',
+                '{"left": 632, "top": 24, "right": 1590, "bottom": 1184, "coord_origin": "TOPLEFT"}'::JSON,
+                'image',
+                '{"page": {"page_no": 1, "width": 1600, "height": 1200}}'::JSON
+            )
+            """
+        )
+
+    client = TestClient(create_app(db_path))
+
+    response = client.get("/api/documents/hash1/regions")
+    assert response.status_code == HTTP_OK
+    payload = response.json()
+    overlay = next(
+        item for item in payload["overlays"] if item["annotation_engine"] == "infinity"
+    )
+    assert payload["document"]["pages"] == [
+        {"page_no": 1, "width": 3482.0, "height": 2612.0}
+    ]
+    assert overlay["bbox"]["left_pct"] == approx(39.5)
+    assert overlay["bbox"]["top_pct"] == approx(2.0)
+    assert overlay["bbox"]["width_pct"] == approx(59.875)
+    assert overlay["bbox"]["height_pct"] == approx(96.6666666667)
+
+
 def test_annotation_settings_api_updates_overlay_style(tmp_path) -> None:
     db_path = tmp_path / "trapo.duckdb"
     pdf_path = tmp_path / "invoice.pdf"

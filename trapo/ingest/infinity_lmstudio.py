@@ -8,7 +8,6 @@ import httpx
 from PIL import Image
 
 from trapo.ingest.infinity_models import InfinityOptions
-from trapo.ingest.lmstudio_context import ensure_lmstudio_max_context
 from trapo.ingest.lmstudio_chat import (
     ChatPayloadRequest,
     HttpClient,
@@ -47,11 +46,6 @@ class LmStudioInfinityParser:
     def __init__(self, options: InfinityOptions) -> None:
         self._options = options
         self._base_url = normalize_lmstudio_base_url(DEFAULT_LMSTUDIO_BASE_URL)
-        ensure_lmstudio_max_context(
-            base_url=self._base_url,
-            model=self._options.model,
-            timeout_seconds=min(DEFAULT_LMSTUDIO_TIMEOUT_SECONDS, 60.0),
-        )
         self._client = cast(
             HttpClient,
             httpx.Client(

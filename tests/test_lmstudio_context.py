@@ -12,6 +12,7 @@ from trapo.ingest.lmstudio_context import (
     resolve_markdown_max_tokens,
 )
 from trapo.ingest.lmstudio_models import DEFAULT_LMSTUDIO_CONTEXT_TOKENS
+from trapo.ingest.lmstudio_unload import unload_lmstudio_model
 from trapo.ingest.lmstudio_urls import normalize_lmstudio_base_url
 
 
@@ -202,6 +203,32 @@ def test_ensure_lmstudio_max_context_unload_falls_back_to_model_key() -> None:
     assert info.load_status == "already_max"
     assert client.unload_payloads == [{"model": "other/model"}]
     assert client.post_payloads == []
+
+
+def test_unload_lmstudio_model_unloads_target_instances() -> None:
+    client = _FakeContextClient(
+        model_info={
+            "models": [
+                {
+                    "key": "google/gemma-4-26b-a4b-qat",
+                    "loaded_instances": [{"id": "gemma-instance"}],
+                },
+                {
+                    "key": "infinity-parser2-flash",
+                    "loaded_instances": [{"id": "infinity-instance"}],
+                },
+            ]
+        },
+        load_response={},
+    )
+
+    unload_lmstudio_model(
+        client,
+        "http://localhost:1234",
+        "google/gemma-4-26b-a4b-qat",
+    )
+
+    assert client.unload_payloads == [{"instance_id": "gemma-instance"}]
 
 
 def test_lmstudio_native_base_url_strips_openai_suffix() -> None:

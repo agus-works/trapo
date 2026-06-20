@@ -132,6 +132,15 @@
   background: color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
+.rowLabelCell {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+}
+
 .rowLabel {
   display: flex;
   gap: 6px;
@@ -144,6 +153,29 @@
   background: transparent;
   color: var(--foreground);
   text-align: left;
+  cursor: pointer;
+}
+
+.rowTwisty,
+.rowTwistySpacer {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 18px;
+}
+
+.rowTwisty {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.rowTwisty[data-collapsed="true"] {
+  transform: rotate(-90deg);
 }
 
 .rowLabel span {

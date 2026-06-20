@@ -140,7 +140,14 @@ context tokens rather than LM Studio's low default such as `4096`.
 ## Current Caveats
 
 - LM Studio must already be running. By default, Trapo asks LM Studio to load
-  the target vision model at its maximum supported context before ingest.
+  the target vision model at its maximum supported context before each
+  LM Studio-backed engine step.
+- Trapo loads models at maximum context, but annotation JSON generation is
+  bounded separately. The default annotation output budget is 16,384 tokens,
+  followed by three compact retries on invalid or truncated JSON.
+- LM Studio-backed engine steps lease their target model: other active models
+  are unloaded before loading the target, and the target is unloaded after the
+  step completes.
 - GPU optimization is configured in LM Studio, not inside Trapo.
 - `--lmstudio-timeout` defaults to 240 seconds in the CLI and is used as the per-page read
   timeout for non-streamed generation. Trapo keeps connect, write, and pool

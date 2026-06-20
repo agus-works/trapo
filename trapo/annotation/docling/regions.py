@@ -40,7 +40,9 @@ REGION_KIND_BY_LABEL_FRAGMENT = (
 )
 ANNOTATION_ENGINE_ROW_INDEX = 6
 DISPLAY_SPACE_ENGINES = frozenset({"lmstudio"})
-NORMALIZED_PAGE_ENGINES = frozenset({"docling_normalized", "mineru_normalized"})
+NORMALIZED_PAGE_ENGINES = frozenset(
+    {"docling_normalized", "mineru_normalized", "infinity"}
+)
 
 
 @dataclass(frozen=True)
@@ -354,7 +356,7 @@ def _mineru_normalization_page(page: PageInfo, repaired_page: PageInfo) -> PageI
 
 
 def _metadata_page(metadata: dict[str, object], *, fallback: PageInfo) -> PageInfo:
-    target_page = metadata.get("target_page")
+    target_page = metadata.get("target_page") or metadata.get("page")
     if not isinstance(target_page, dict):
         return fallback
     width = _float_or_none(target_page.get("width"))

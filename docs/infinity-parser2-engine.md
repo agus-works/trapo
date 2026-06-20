@@ -19,6 +19,13 @@ web preview. Raw parser output is stored in `ocr_documents`, while normalized
 layout boxes are stored in `document_regions` and participate in region-term
 search and fusion.
 
+Infinity Parser2 returns `[x1, y1, x2, y2]` boxes in the coordinate space of the
+rendered preview image it parsed. Trapo stores that preview page size in region
+metadata and the region API normalizes `infinity` overlays against that metadata,
+not the source PDF point size. This avoids global offset and scale drift when a
+source page such as `3482x2612` is rendered to a preview image such as
+`1600x1200`.
+
 The Markdown engine reads the same page Markdown JPEG artifacts used by other
 page-image Markdown generators. Infinity Parser2 expects filesystem paths, so
 this engine creates cache artifacts even when general page Markdown caching is

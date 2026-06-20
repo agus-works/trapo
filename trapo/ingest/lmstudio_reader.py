@@ -13,7 +13,12 @@ from trapo.ingest.lmstudio_models import (
     LmStudioPageResponse,
     LmStudioReadResult,
 )
-from trapo.ingest.lmstudio_prompts import page_prompt
+from trapo.ingest.lmstudio_retry import (
+    attempts_from_exception,
+    detect_page_regions_with_retries,
+    page_error_message,
+    page_error_type,
+)
 from trapo.ingest.page_images import RenderedPageImage, iter_rendered_pages
 
 
@@ -49,20 +54,23 @@ def read_with_lmstudio(
             _log_page_start(log, page, len(page_evidence))
             started_at = time.perf_counter()
             try:
-                parsed, raw_response = lmstudio.detect_page_regions(
+                parsed, raw_response, attempts = detect_page_regions_with_retries(
+                    lmstudio,
                     page,
-                    prompt=page_prompt(
-                        page,
-                        page_evidence,
-                        profile_instructions=options.profile_instructions,
-                    ),
-                    max_tokens=options.max_tokens,
-                    temperature=options.temperature,
+                    options=options,
+                    page_evidence=page_evidence,
+                    log=log,
                 )
             except Exception as exc:
                 elapsed_seconds = time.perf_counter() - started_at
                 page_outputs.append(
-                    _page_error_output(page, len(page_evidence), elapsed_seconds, exc)
+                    _page_error_output(
+                        page,
+                        len(page_evidence),
+                        elapsed_seconds,
+                        exc,
+                        attempts=attempts_from_exception(exc),
+                    )
                 )
                 _log_page_error(log, page.page_no, elapsed_seconds, exc)
                 continue
@@ -73,13 +81,18 @@ def read_with_lmstudio(
             )
             page_outputs.append(
                 _page_output(
-                    page, parsed, raw_response, len(page_evidence), elapsed_seconds
+                    page,
+                    parsed,
+                    raw_response,
+                    len(page_evidence),
+                    elapsed_seconds,
+                    attempts=attempts,
                 )
             )
     finally:
         if close_client:
             lmstudio.close()
-    if not any(page.get("status") != "error" for page in page_outputs):
+    if not page_outputs:
         raise RuntimeError("LM Studio failed for every rendered page.")
 
     return LmStudioReadResult(
@@ -105,12 +118,13 @@ def read_with_lmstudio(
     )
 
 
-def _page_output(
+def _page_output(  # noqa: PLR0913
     page: RenderedPageImage,
     parsed: LmStudioPageResponse,
     raw_response: dict[str, Any],
     evidence_count: int,
     elapsed_seconds: float,
+    attempts: list[dict[str, Any]],
 ) -> dict[str, Any]:
     return {
         "page_no": page.page_no,
@@ -125,6 +139,7 @@ def _page_output(
         "warnings": parsed.warnings,
         "evidence_count": evidence_count,
         "elapsed_seconds": elapsed_seconds,
+        "attempts": attempts,
         "raw_response": raw_response,
     }
 
@@ -134,6 +149,8 @@ def _page_error_output(
     evidence_count: int,
     elapsed_seconds: float,
     exc: Exception,
+    *,
+    attempts: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     return {
         "status": "error",
@@ -148,8 +165,9 @@ def _page_error_output(
         "warnings": [],
         "evidence_count": evidence_count,
         "elapsed_seconds": elapsed_seconds,
-        "error_type": type(exc).__name__,
-        "error": str(exc),
+        "error_type": page_error_type(exc),
+        "error": page_error_message(exc),
+        "attempts": attempts or [],
     }
 
 

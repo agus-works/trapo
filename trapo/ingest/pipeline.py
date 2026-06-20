@@ -23,11 +23,6 @@ from trapo.ingest.engine_steps import (
     process_mineru,
 )
 from trapo.ingest.infinity_models import INFINITY_ENGINE
-from trapo.ingest.lmstudio_context import (
-    LmStudioContextInfo,
-    ensure_lmstudio_max_context,
-)
-from trapo.ingest.markdown_engines import requested_markdown_engines
 from trapo.ingest.normalized_pipelines import (
     DOCLING_NORMALIZED_ENGINE,
     MINERU_NORMALIZED_ENGINE,
@@ -103,7 +98,6 @@ def ingest_directory(  # noqa: PLR0912
     activate_diagnostic_run(connection, run_id)
 
     log = _logger(options.verbosity)
-    lmstudio_context = _lmstudio_context_preflight(options, log)
     files = discover_files(directory)
     log(f"Discovered {len(files)} file(s) under {directory}")
 
@@ -390,7 +384,7 @@ def ingest_directory(  # noqa: PLR0912
                             run_id,
                             options,
                             log,
-                            lmstudio_context,
+                            None,
                         )
                         file_engine_errors += markdown_summary.error_count
                     except Exception as exc:
@@ -613,30 +607,6 @@ def _process_preview_cache(
 def _preview_cache_complete(connection: DuckConnection, file_hash: str) -> bool:
     images = read_document_preview_images(connection, file_hash)
     return bool(images) and all(image.cache_path.exists() for image in images)
-
-
-def _lmstudio_context_preflight(
-    options: IngestOptions,
-    log: Callable[[str], None],
-) -> LmStudioContextInfo | None:
-    if not _uses_lmstudio(options):
-        return None
-    return ensure_lmstudio_max_context(
-        base_url=options.lmstudio_base_url,
-        model=options.lmstudio_model,
-        timeout_seconds=min(options.lmstudio_timeout_seconds, 60.0),
-        enabled=options.lmstudio_maximize_context,
-        log=log,
-    )
-
-
-def _uses_lmstudio(options: IngestOptions) -> bool:
-    markdown_engines = requested_markdown_engines(options)
-    return (
-        "lmstudio" in _requested_engines(options.annotation_engines)
-        or "lmstudio_markdown" in markdown_engines
-        or (options.markitdown_lmstudio_ocr and "markitdown" in markdown_engines)
-    )
 
 
 def _logger(verbosity: int) -> Callable[[str], None]:

@@ -41,16 +41,6 @@ class LoadedLmStudioModel:
     instance_id: str | None = None
 
 
-def read_lmstudio_model_info(
-    client: LmStudioNativeClient, native_base_url: str, model: str
-) -> dict[str, Any]:
-    data = read_lmstudio_models_payload(client, native_base_url)
-    match = model_from_lmstudio_list(data, model)
-    if match is not None:
-        return match
-    return read_lmstudio_model_detail(client, native_base_url, model)
-
-
 def read_lmstudio_models_payload(
     client: LmStudioNativeClient, native_base_url: str
 ) -> object:

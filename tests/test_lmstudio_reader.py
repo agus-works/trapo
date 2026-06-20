@@ -21,6 +21,8 @@ RECEIPT_WIDTH = 120.0
 RECEIPT_HEIGHT = 60.0
 RECEIPT_RENDER_WIDTH = 80
 TOTAL_BOX = [100, 250, 300, 750]
+SUCCESS_AFTER_RETRY_ATTEMPTS = 3
+INITIAL_WITH_THREE_RETRIES_ATTEMPTS = 4
 
 
 def test_iter_rendered_pages_splits_multipage_tiff(tmp_path) -> None:
@@ -116,6 +118,56 @@ def test_read_with_lmstudio_continues_after_page_failure(tmp_path) -> None:
     assert any("LM Studio page failed: page=2" in message for message in logs)
 
 
+def test_read_with_lmstudio_retries_invalid_page_response(tmp_path) -> None:
+    path = tmp_path / "receipt.png"
+    Image.new(
+        "RGB", (int(RECEIPT_WIDTH), int(RECEIPT_HEIGHT)), color=(255, 255, 255)
+    ).save(path)
+    client = _RetryLmStudioClient(failures=2)
+
+    result = read_with_lmstudio(
+        path,
+        options=LmStudioOptions(
+            model="test-vision-model",
+            image_max_side=RECEIPT_RENDER_WIDTH,
+            max_tokens=262_144,
+            retry_count=3,
+        ),
+        client=client,
+    )
+
+    attempts = result.data["pages"][0]["attempts"]
+    assert client.prompt_count == SUCCESS_AFTER_RETRY_ATTEMPTS
+    assert [attempt["status"] for attempt in attempts] == ["error", "error", "ok"]
+    assert [attempt["max_tokens"] for attempt in attempts] == [16384, 8192, 4096]
+    assert "Previous response was invalid" in client.prompts[1]
+
+
+def test_read_with_lmstudio_records_all_retry_failures(tmp_path) -> None:
+    path = tmp_path / "receipt.png"
+    Image.new(
+        "RGB", (int(RECEIPT_WIDTH), int(RECEIPT_HEIGHT)), color=(255, 255, 255)
+    ).save(path)
+    client = _RetryLmStudioClient(failures=4)
+
+    result = read_with_lmstudio(
+        path,
+        options=LmStudioOptions(
+            model="test-vision-model",
+            image_max_side=RECEIPT_RENDER_WIDTH,
+            max_tokens=262_144,
+            retry_count=3,
+        ),
+        client=client,
+    )
+
+    page = result.data["pages"][0]
+    assert page["status"] == "error"
+    assert page["page_no"] == 1
+    assert len(page["attempts"]) == INITIAL_WITH_THREE_RETRIES_ATTEMPTS
+    assert all(attempt["status"] == "error" for attempt in page["attempts"])
+
+
 class _FakeLmStudioClient:
     def __init__(self) -> None:
         self.prompt_count = 0
@@ -170,6 +222,32 @@ class _FailingLmStudioClient(_FakeLmStudioClient):
     ) -> tuple[LmStudioPageResponse, dict[str, Any]]:
         if page.page_no == self.fail_page_no:
             raise RuntimeError("synthetic page failure")
+        return super().detect_page_regions(
+            page,
+            prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+
+
+class _RetryLmStudioClient(_FakeLmStudioClient):
+    def __init__(self, *, failures: int) -> None:
+        super().__init__()
+        self.failures = failures
+        self.prompts: list[str] = []
+
+    def detect_page_regions(
+        self,
+        page: RenderedPageImage,
+        *,
+        prompt: str,
+        max_tokens: int,
+        temperature: float,
+    ) -> tuple[LmStudioPageResponse, dict[str, Any]]:
+        self.prompts.append(prompt)
+        if self.prompt_count < self.failures:
+            self.prompt_count += 1
+            raise ValueError("invalid json")
         return super().detect_page_regions(
             page,
             prompt=prompt,

@@ -23,6 +23,7 @@ from trapo.ingest.infinity_models import (
 from trapo.ingest.infinity_reader import read_page_markdown_with_infinity
 from trapo.ingest.lmstudio_context import LmStudioContextInfo
 from trapo.ingest.lmstudio_context import resolve_markdown_max_tokens
+from trapo.ingest.lmstudio_lifecycle import lmstudio_model_lease
 from trapo.ingest.lmstudio_models import LmStudioMarkdownOptions
 from trapo.ingest.markdown_engines import requested_markdown_engines
 from trapo.ingest.markdown_reader import read_markdown_with_lmstudio
@@ -325,12 +326,26 @@ def _process_infinity_markdown(  # noqa: PLR0913
         page_images = list(
             iter_markdown_page_images(path, options=render_options, log=log)
         )
-        outputs = read_page_markdown_with_infinity(
-            page_images,
-            source_path=path,
-            options=infinity_options,
-            log=log,
-        )
+        if infinity_options.backend == "lmstudio":
+            with lmstudio_model_lease(
+                model=resolved_model,
+                timeout_seconds=min(options.lmstudio_timeout_seconds, 60.0),
+                enabled=options.lmstudio_maximize_context,
+                log=log,
+            ):
+                outputs = read_page_markdown_with_infinity(
+                    page_images,
+                    source_path=path,
+                    options=infinity_options,
+                    log=log,
+                )
+        else:
+            outputs = read_page_markdown_with_infinity(
+                page_images,
+                source_path=path,
+                options=infinity_options,
+                log=log,
+            )
         pages: list[PageMarkdown] = []
         errors: list[dict[str, Any]] = []
         for output in outputs:
@@ -447,15 +462,22 @@ def _process_lmstudio_markdown(  # noqa: PLR0913
         def persist_page(page: PageMarkdown) -> None:
             upsert_page_markdown(connection, page)
 
-        result = read_markdown_with_lmstudio(
-            path,
-            file_hash=file_hash,
-            options=markdown_options,
-            evidence_by_page={},
+        with lmstudio_model_lease(
+            base_url=options.lmstudio_base_url,
+            model=options.lmstudio_model,
+            timeout_seconds=min(options.lmstudio_timeout_seconds, 60.0),
+            enabled=options.lmstudio_maximize_context,
             log=log,
-            on_plain_page=persist_page,
-            on_page=persist_page,
-        )
+        ):
+            result = read_markdown_with_lmstudio(
+                path,
+                file_hash=file_hash,
+                options=markdown_options,
+                evidence_by_page={},
+                log=log,
+                on_plain_page=persist_page,
+                on_page=persist_page,
+            )
         span_set_attributes(
             markdown_span,
             {

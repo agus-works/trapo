@@ -7,7 +7,12 @@ import { DiagnosticsDetailsPane } from './DiagnosticsDetailsPane';
 import { DiagnosticsTimelineAxis, DiagnosticsTimelineGrid } from './DiagnosticsTimelineScale';
 import styles from './DiagnosticsTimelineView.module.css';
 import type { TimelineRow } from './diagnosticsTimelineRows';
-import { buildTimelineRange, buildTimelineTicks, formatMs } from './diagnosticsTimelineRows';
+import {
+  buildTimelineRange,
+  buildTimelineTicks,
+  formatMs,
+  visibleRows,
+} from './diagnosticsTimelineRows';
 import type { DiagnosticEventRecord, DiagnosticSpanRecord, DiagnosticTraceSummary } from './types';
 
 interface DiagnosticsTimelinePanelsProps {
@@ -27,6 +32,19 @@ export function DiagnosticsTimelinePanels({
   summary,
   onSpanSelect,
 }: DiagnosticsTimelinePanelsProps) {
+  const [collapsedIds, setCollapsedIds] = useState(() => new Set<string>());
+  const renderedRows = useMemo(() => visibleRows(rows, collapsedIds), [collapsedIds, rows]);
+  const toggleCollapsed = (spanId: string) => {
+    setCollapsedIds((current) => {
+      const next = new Set(current);
+      if (next.has(spanId)) {
+        next.delete(spanId);
+      } else {
+        next.add(spanId);
+      }
+      return next;
+    });
+  };
   return (
     <ResizablePanelGroup className={styles.timelineGroup} direction="vertical">
       <ResizablePanel className={styles.timelinePanel} defaultSize={68} minSize={34}>
@@ -34,7 +52,13 @@ export function DiagnosticsTimelinePanels({
           <span>Pipeline step</span>
           <span>Elapsed time · {formatMs(summary?.duration_ms ?? 0)}</span>
         </div>
-        <TimelineRowsViewport onSpanSelect={onSpanSelect} rows={rows} selectedId={selectedId} />
+        <TimelineRowsViewport
+          collapsedIds={collapsedIds}
+          onSpanSelect={onSpanSelect}
+          onToggleCollapsed={toggleCollapsed}
+          rows={renderedRows}
+          selectedId={selectedId}
+        />
         {rows.length === 0 && (
           <div className={styles.emptyState}>
             <AlertTriangle size={18} />
@@ -54,10 +78,14 @@ function TimelineRowsViewport({
   rows,
   selectedId,
   onSpanSelect,
+  collapsedIds,
+  onToggleCollapsed,
 }: {
+  collapsedIds: ReadonlySet<string>;
   rows: TimelineRow[];
   selectedId: string | null;
   onSpanSelect: (spanId: string) => void;
+  onToggleCollapsed: (spanId: string) => void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -84,7 +112,9 @@ function TimelineRowsViewport({
             return (
               <DiagnosticTimelineRow
                 key={row.span.span_id}
+                collapsed={collapsedIds.has(row.span.span_id)}
                 onSelect={onSpanSelect}
+                onToggleCollapsed={onToggleCollapsed}
                 row={row}
                 selected={row.span.span_id === selectedId}
                 top={item.start}
@@ -98,12 +128,16 @@ function TimelineRowsViewport({
 }
 
 function DiagnosticTimelineRow({
+  collapsed,
   onSelect,
+  onToggleCollapsed,
   row,
   selected,
   top,
 }: {
+  collapsed: boolean;
   onSelect: (spanId: string) => void;
+  onToggleCollapsed: (spanId: string) => void;
   row: TimelineRow;
   selected: boolean;
   top: number;
@@ -114,16 +148,33 @@ function DiagnosticTimelineRow({
       data-selected={selected}
       style={{ transform: `translateY(${top}px)` }}
     >
-      <button
-        className={styles.rowLabel}
-        onClick={() => onSelect(row.span.span_id)}
-        style={{ paddingLeft: 10 + row.depth * 16 }}
-        type="button"
-      >
-        <span data-status={row.span.status} />
-        <strong>{row.span.pipeline_step}</strong>
-        <small>{row.span.annotation_engine ?? row.span.category}</small>
-      </button>
+      <div className={styles.rowLabelCell} style={{ paddingLeft: 10 + row.depth * 16 }}>
+        {row.hasChildren ? (
+          <button
+            aria-label={collapsed ? 'Expand span' : 'Collapse span'}
+            className={styles.rowTwisty}
+            data-collapsed={collapsed}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleCollapsed(row.span.span_id);
+            }}
+            type="button"
+          >
+            ▾
+          </button>
+        ) : (
+          <span className={styles.rowTwistySpacer} />
+        )}
+        <button
+          className={styles.rowLabel}
+          onClick={() => onSelect(row.span.span_id)}
+          type="button"
+        >
+          <span data-status={row.span.status} />
+          <strong>{row.span.pipeline_step}</strong>
+          <small>{row.span.annotation_engine ?? row.span.category}</small>
+        </button>
+      </div>
       <div className={styles.track}>
         <button
           className={styles.bar}

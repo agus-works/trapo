@@ -141,6 +141,7 @@ def _infinity_regions(data: dict[str, Any]) -> list[InfinityRegion]:
                         "model": model,
                         "raw_item": item,
                         "page": page_metadata(page_info),
+                        "target_page": page_metadata(page_info),
                         "render_sha256": page.get("render_sha256"),
                         "image_path": page.get("image_path"),
                         "elapsed_seconds": page.get("elapsed_seconds"),

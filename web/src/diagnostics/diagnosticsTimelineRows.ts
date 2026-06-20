@@ -2,6 +2,7 @@ import type { DiagnosticSpanRecord } from './types';
 
 export interface TimelineRow {
   depth: number;
+  hasChildren: boolean;
   leftPct: number;
   span: DiagnosticSpanRecord;
   widthPct: number;
@@ -30,6 +31,11 @@ export function buildRows(spans: DiagnosticSpanRecord[]): TimelineRow[] {
   const end = Math.max(start + 1, minTimestamp(sorted, 'ended_at', Math.max));
   const total = Math.max(1, end - start);
   const byId = new Map(sorted.map((span) => [span.span_id, span]));
+  const childParentIds = new Set(
+    sorted
+      .map((span) => span.parent_span_id)
+      .filter((parentId): parentId is string => Boolean(parentId)),
+  );
   const depthCache = new Map<string, number>();
 
   return sorted.map((span) => {
@@ -38,10 +44,28 @@ export function buildRows(spans: DiagnosticSpanRecord[]): TimelineRow[] {
     const widthPct = Math.min(rawWidthPct, Math.max(0.35, 100 - leftPct));
     return {
       depth: depthFor(span, byId, depthCache),
+      hasChildren: childParentIds.has(span.span_id),
       leftPct,
       span,
       widthPct,
     };
+  });
+}
+
+export function visibleRows(rows: TimelineRow[], collapsedIds: ReadonlySet<string>): TimelineRow[] {
+  const hiddenParentIds = new Set<string>();
+  return rows.filter((row) => {
+    const parentId = row.span.parent_span_id;
+    if (parentId && hiddenParentIds.has(parentId)) {
+      if (row.hasChildren) {
+        hiddenParentIds.add(row.span.span_id);
+      }
+      return false;
+    }
+    if (collapsedIds.has(row.span.span_id)) {
+      hiddenParentIds.add(row.span.span_id);
+    }
+    return true;
   });
 }
 

@@ -56,6 +56,12 @@
   background: color-mix(in srgb, #e5484d 12%, transparent);
 }
 
+.errorBlock summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
 .detailsPane h3 {
   margin: 0 0 6px;
   font-size: 12px;

@@ -17,6 +17,7 @@ from trapo.ingest.infinity_models import (
 )
 from trapo.ingest.infinity_reader import read_regions_with_infinity
 from trapo.ingest.lmstudio_models import LmStudioOptions
+from trapo.ingest.lmstudio_lifecycle import lmstudio_model_lease
 from trapo.ingest.lmstudio_profiles import (
     LmStudioProfileRunSummary,
     LmStudioPromptProfile,
@@ -137,12 +138,26 @@ def process_infinity(  # noqa: PLR0913
             "infinity.batch_size": options.infinity_batch_size,
         },
     ):
-        read_result = read_regions_with_infinity(
-            pages,
-            source_path=path,
-            options=infinity_options,
-            log=log,
-        )
+        if infinity_options.backend == "lmstudio":
+            with lmstudio_model_lease(
+                model=resolved_model,
+                timeout_seconds=min(options.lmstudio_timeout_seconds, 60.0),
+                enabled=options.lmstudio_maximize_context,
+                log=log,
+            ):
+                read_result = read_regions_with_infinity(
+                    pages,
+                    source_path=path,
+                    options=infinity_options,
+                    log=log,
+                )
+        else:
+            read_result = read_regions_with_infinity(
+                pages,
+                source_path=path,
+                options=infinity_options,
+                log=log,
+            )
     record_ocr_success(
         connection,
         file_hash,
@@ -261,12 +276,19 @@ def process_lmstudio(  # noqa: PLR0913
             "annotation.engine": profile.annotation_engine,
         },
     ):
-        read_result = read_with_lmstudio(
-            path,
-            options=lmstudio_options,
-            evidence_by_page=evidence_by_page,
+        with lmstudio_model_lease(
+            base_url=options.lmstudio_base_url,
+            model=options.lmstudio_model,
+            timeout_seconds=min(options.lmstudio_timeout_seconds, 60.0),
+            enabled=options.lmstudio_maximize_context,
             log=log,
-        )
+        ):
+            read_result = read_with_lmstudio(
+                path,
+                options=lmstudio_options,
+                evidence_by_page=evidence_by_page,
+                log=log,
+            )
     record_ocr_success(
         connection,
         file_hash,
