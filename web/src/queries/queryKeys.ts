@@ -10,6 +10,12 @@ export const queryKeys = {
     ['documents', fileHash, 'markdown', markdownEngine, pageNo ?? 'all'] as const,
   documentAsset: (fileHash: string) => ['documents', fileHash, 'asset'] as const,
   diagnosticRuns: ['diagnostics', 'runs'] as const,
+  diagnosticProgress: (ingestRunId?: number | null) =>
+    ['diagnostics', 'progress', ingestRunId ?? 'latest'] as const,
+  diagnosticAnalytics: (ingestRunId?: number | null) =>
+    ['diagnostics', 'analytics', ingestRunId ?? 'latest'] as const,
+  diagnosticModels: (ingestRunId?: number | null) =>
+    ['diagnostics', 'models', ingestRunId ?? 'latest'] as const,
   diagnosticTrace: (params: DiagnosticTraceParams) =>
     [
       'diagnostics',

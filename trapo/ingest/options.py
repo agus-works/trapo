@@ -2,14 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from trapo.annotation.fusion.profiles import DEFAULT_FUSION_PROFILE
 from trapo.ingest.lmstudio_models import (
     DEFAULT_LMSTUDIO_BASE_URL,
-    DEFAULT_LMSTUDIO_BOX_ORIGIN,
-    DEFAULT_LMSTUDIO_CONTEXT_TOKENS,
-    DEFAULT_LMSTUDIO_MODEL,
-    DEFAULT_LMSTUDIO_ORIENTATION_MAX_SIDE,
-    DEFAULT_LMSTUDIO_ORIENTATION_MIN_CONFIDENCE,
     DEFAULT_LMSTUDIO_TIMEOUT_SECONDS,
 )
 from trapo.ingest.infinity_models import (
@@ -57,36 +51,19 @@ class IngestOptions:
     infinity_device: str = DEFAULT_INFINITY_DEVICE
     infinity_torch_dtype: str = DEFAULT_INFINITY_TORCH_DTYPE
     lmstudio_base_url: str = DEFAULT_LMSTUDIO_BASE_URL
-    lmstudio_model: str = DEFAULT_LMSTUDIO_MODEL
     lmstudio_timeout_seconds: float = DEFAULT_LMSTUDIO_TIMEOUT_SECONDS
-    lmstudio_render_dpi: int = 200
-    lmstudio_image_max_side: int = 2048
-    lmstudio_max_tokens: int = DEFAULT_LMSTUDIO_CONTEXT_TOKENS
-    lmstudio_box_origin: str = DEFAULT_LMSTUDIO_BOX_ORIGIN
-    lmstudio_include_evidence: bool = True
-    lmstudio_profiles: str = "balanced"
-    lmstudio_orientation: str = "auto"
-    lmstudio_orientation_min_confidence: float = (
-        DEFAULT_LMSTUDIO_ORIENTATION_MIN_CONFIDENCE
-    )
-    lmstudio_orientation_max_side: int = DEFAULT_LMSTUDIO_ORIENTATION_MAX_SIDE
-    lmstudio_orientation_max_tokens: int = DEFAULT_LMSTUDIO_CONTEXT_TOKENS
     lmstudio_maximize_context: bool = True
     page_markdown: bool = True
-    page_markdown_engines: str = "markitdown"
+    page_markdown_engines: str = "infinity_markdown"
     page_markdown_render_dpi: int = DEFAULT_PAGE_MARKDOWN_RENDER_DPI
     page_markdown_image_max_side: int = DEFAULT_PAGE_MARKDOWN_IMAGE_MAX_SIDE
     page_markdown_image_format: str = DEFAULT_PAGE_MARKDOWN_IMAGE_FORMAT
     page_markdown_jpeg_quality: int = DEFAULT_PAGE_MARKDOWN_JPEG_QUALITY
     page_markdown_cache: bool = True
     page_markdown_cache_root: str = DEFAULT_PAGE_MARKDOWN_CACHE_ROOT
-    page_markdown_max_tokens: int = DEFAULT_LMSTUDIO_CONTEXT_TOKENS
-    markitdown_lmstudio_ocr: bool = False
     markitdown_content_understanding: bool = False
     markitdown_cu_endpoint: str = ""
     markitdown_cu_analyzer: str = ""
-    fuse_regions: bool = True
-    fusion_profiles: str = DEFAULT_FUSION_PROFILE
     verbosity: int = 0
 
 

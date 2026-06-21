@@ -71,11 +71,13 @@ def read_document_markdown(
     if table_exists(connection, "document_page_markdown"):
         if markdown_engine == BEST_AVAILABLE_MARKDOWN_ENGINE:
             pages = _best_available_markdown(connection, file_hash, page_no=page_no)
+        elif markdown_engine not in MARKDOWN_ENGINE_PRIORITY:
+            pages = []
         else:
             pages = _provider_markdown(
                 connection, file_hash, markdown_engine=markdown_engine, page_no=page_no
             )
-            if not pages and markdown_engine not in MARKDOWN_ENGINE_PRIORITY:
+            if not pages:
                 pages = _fallback_markdown(
                     connection, file_hash, markdown_engine, page_no=page_no
                 )

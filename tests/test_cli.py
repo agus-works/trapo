@@ -10,7 +10,6 @@ import uvicorn
 
 from trapo.cli import app
 from trapo.db import connect
-from trapo.ingest.lmstudio_profiles import requested_lmstudio_profiles
 from trapo.ingest.pipeline import _requested_engines
 from trapo.migrations.versions import MIGRATIONS
 from trapo.page_orientation import read_page_rotation_degrees
@@ -138,13 +137,8 @@ def test_ingest_defaults_to_docling_and_mineru(monkeypatch, tmp_path) -> None:
     assert isinstance(options, trapo_cli.IngestCommandOptions)
     assert options.annotation_engines == "docling,mineru"
     assert options.mineru_backend == "pipeline"
-    assert options.lmstudio_model == "google/gemma-4-26b-a4b-qat"
-    assert options.lmstudio_box_origin == "bottomleft"
-    assert options.lmstudio_profiles == "balanced"
-    assert options.lmstudio_orientation == "auto"
     assert options.page_markdown is True
-    assert options.page_markdown_engines == "markitdown"
-    assert options.markitdown_lmstudio_ocr is False
+    assert options.page_markdown_engines == "infinity_markdown"
     assert (
         options.page_markdown_render_dpi == trapo_cli.DEFAULT_PAGE_MARKDOWN_RENDER_DPI
     )
@@ -164,8 +158,6 @@ def test_ingest_defaults_to_docling_and_mineru(monkeypatch, tmp_path) -> None:
     assert (
         options.page_markdown_cache_root == trapo_cli.DEFAULT_PAGE_MARKDOWN_CACHE_ROOT
     )
-    assert options.fuse_regions is True
-    assert options.fusion_profiles == "balanced"
 
 
 def test_ingest_can_disable_page_markdown(monkeypatch, tmp_path) -> None:
@@ -218,9 +210,9 @@ def test_skylos_check_cli_runs_report_only_by_default(monkeypatch, tmp_path) -> 
     assert options.include_sca is True
 
 
-def test_annotation_engines_all_includes_lmstudio_and_infinity() -> None:
-    assert _requested_engines("all") == ["docling", "mineru", "lmstudio", "infinity"]
-    assert _requested_engines("lm-studio,local-docling") == ["lmstudio", "docling"]
+def test_annotation_engines_all_includes_infinity() -> None:
+    assert _requested_engines("all") == ["docling", "mineru", "infinity"]
+    assert _requested_engines("lm-studio,local-docling") == ["docling"]
 
 
 def test_annotation_engines_normalized_aliases() -> None:
@@ -231,17 +223,6 @@ def test_annotation_engines_normalized_aliases() -> None:
     assert _requested_engines("docling-normalized,local-mineru-normalized") == [
         "docling_normalized",
         "mineru_normalized",
-    ]
-
-
-def test_lmstudio_profiles_all_expands_alternatives() -> None:
-    profiles = requested_lmstudio_profiles("all")
-
-    assert [profile.name for profile in profiles] == ["balanced", "strict", "recall"]
-    assert [profile.annotation_engine for profile in profiles] == [
-        "lmstudio",
-        "lmstudio_strict",
-        "lmstudio_recall",
     ]
 
 

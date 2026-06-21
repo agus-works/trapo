@@ -11,8 +11,14 @@ import type {
   CommandSearchApiCommandsSearchGetParams,
   CommandSearchResultRecord,
   DatabaseStatusResponse,
+  DiagnosticAnalyticsPayload,
+  DiagnosticModelsPayload,
+  DiagnosticProgressPayload,
   DiagnosticRunRecord,
   DiagnosticTracePayload,
+  DiagnosticsAnalyticsApiDiagnosticsAnalyticsGetParams,
+  DiagnosticsModelsApiDiagnosticsModelsGetParams,
+  DiagnosticsProgressApiDiagnosticsProgressGetParams,
   DiagnosticsRunsApiDiagnosticsRunsGetParams,
   DiagnosticsTraceApiDiagnosticsTraceGetParams,
   DocumentDetail,
@@ -337,6 +343,177 @@ export const diagnosticsTraceApiDiagnosticsTraceGet = async (params?: Diagnostic
 
   const data: diagnosticsTraceApiDiagnosticsTraceGetResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as diagnosticsTraceApiDiagnosticsTraceGetResponse
+}
+
+
+
+export type diagnosticsProgressApiDiagnosticsProgressGetResponse200 = {
+  data: DiagnosticProgressPayload
+  status: 200
+}
+
+export type diagnosticsProgressApiDiagnosticsProgressGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type diagnosticsProgressApiDiagnosticsProgressGetResponseSuccess = (diagnosticsProgressApiDiagnosticsProgressGetResponse200) & {
+  headers: Headers;
+};
+export type diagnosticsProgressApiDiagnosticsProgressGetResponseError = (diagnosticsProgressApiDiagnosticsProgressGetResponse422) & {
+  headers: Headers;
+};
+
+export type diagnosticsProgressApiDiagnosticsProgressGetResponse = (diagnosticsProgressApiDiagnosticsProgressGetResponseSuccess | diagnosticsProgressApiDiagnosticsProgressGetResponseError)
+
+export const getDiagnosticsProgressApiDiagnosticsProgressGetUrl = (params?: DiagnosticsProgressApiDiagnosticsProgressGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/diagnostics/progress?${stringifiedParams}` : `/api/diagnostics/progress`
+}
+
+/**
+ * @summary Diagnostics Progress
+ */
+export const diagnosticsProgressApiDiagnosticsProgressGet = async (params?: DiagnosticsProgressApiDiagnosticsProgressGetParams, options?: RequestInit): Promise<diagnosticsProgressApiDiagnosticsProgressGetResponse> => {
+
+  const res = await fetch(getDiagnosticsProgressApiDiagnosticsProgressGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: diagnosticsProgressApiDiagnosticsProgressGetResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as diagnosticsProgressApiDiagnosticsProgressGetResponse
+}
+
+
+
+export type diagnosticsAnalyticsApiDiagnosticsAnalyticsGetResponse200 = {
+  data: DiagnosticAnalyticsPayload
+  status: 200
+}
+
+export type diagnosticsAnalyticsApiDiagnosticsAnalyticsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type diagnosticsAnalyticsApiDiagnosticsAnalyticsGetResponseSuccess = (diagnosticsAnalyticsApiDiagnosticsAnalyticsGetResponse200) & {
+  headers: Headers;
+};
+export type diagnosticsAnalyticsApiDiagnosticsAnalyticsGetResponseError = (diagnosticsAnalyticsApiDiagnosticsAnalyticsGetResponse422) & {
+  headers: Headers;
+};
+
+export type diagnosticsAnalyticsApiDiagnosticsAnalyticsGetResponse = (diagnosticsAnalyticsApiDiagnosticsAnalyticsGetResponseSuccess | diagnosticsAnalyticsApiDiagnosticsAnalyticsGetResponseError)
+
+export const getDiagnosticsAnalyticsApiDiagnosticsAnalyticsGetUrl = (params?: DiagnosticsAnalyticsApiDiagnosticsAnalyticsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/diagnostics/analytics?${stringifiedParams}` : `/api/diagnostics/analytics`
+}
+
+/**
+ * @summary Diagnostics Analytics
+ */
+export const diagnosticsAnalyticsApiDiagnosticsAnalyticsGet = async (params?: DiagnosticsAnalyticsApiDiagnosticsAnalyticsGetParams, options?: RequestInit): Promise<diagnosticsAnalyticsApiDiagnosticsAnalyticsGetResponse> => {
+
+  const res = await fetch(getDiagnosticsAnalyticsApiDiagnosticsAnalyticsGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: diagnosticsAnalyticsApiDiagnosticsAnalyticsGetResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as diagnosticsAnalyticsApiDiagnosticsAnalyticsGetResponse
+}
+
+
+
+export type diagnosticsModelsApiDiagnosticsModelsGetResponse200 = {
+  data: DiagnosticModelsPayload
+  status: 200
+}
+
+export type diagnosticsModelsApiDiagnosticsModelsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type diagnosticsModelsApiDiagnosticsModelsGetResponseSuccess = (diagnosticsModelsApiDiagnosticsModelsGetResponse200) & {
+  headers: Headers;
+};
+export type diagnosticsModelsApiDiagnosticsModelsGetResponseError = (diagnosticsModelsApiDiagnosticsModelsGetResponse422) & {
+  headers: Headers;
+};
+
+export type diagnosticsModelsApiDiagnosticsModelsGetResponse = (diagnosticsModelsApiDiagnosticsModelsGetResponseSuccess | diagnosticsModelsApiDiagnosticsModelsGetResponseError)
+
+export const getDiagnosticsModelsApiDiagnosticsModelsGetUrl = (params?: DiagnosticsModelsApiDiagnosticsModelsGetParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/diagnostics/models?${stringifiedParams}` : `/api/diagnostics/models`
+}
+
+/**
+ * @summary Diagnostics Models
+ */
+export const diagnosticsModelsApiDiagnosticsModelsGet = async (params?: DiagnosticsModelsApiDiagnosticsModelsGetParams, options?: RequestInit): Promise<diagnosticsModelsApiDiagnosticsModelsGetResponse> => {
+
+  const res = await fetch(getDiagnosticsModelsApiDiagnosticsModelsGetUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: diagnosticsModelsApiDiagnosticsModelsGetResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as diagnosticsModelsApiDiagnosticsModelsGetResponse
 }
 
 

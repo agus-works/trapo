@@ -634,6 +634,125 @@ def ingest_diagnostics_schema(
     )
 
 
+def ingest_work_planner_schema(
+    connection: DuckConnection, context: MigrationContext
+) -> None:
+    """Add persisted ingest planning, artifact, and model lease state."""
+    del context
+    connection.execute("CREATE SEQUENCE IF NOT EXISTS ingest_work_unit_id_seq START 1")
+    connection.execute(
+        "CREATE SEQUENCE IF NOT EXISTS ingest_model_lease_id_seq START 1"
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ingest_work_units (
+            work_unit_id BIGINT PRIMARY KEY,
+            ingest_run_id BIGINT NOT NULL,
+            work_key TEXT NOT NULL,
+            file_hash TEXT,
+            page_no INTEGER,
+            phase TEXT NOT NULL,
+            engine TEXT NOT NULL,
+            provider TEXT NOT NULL,
+            model TEXT NOT NULL,
+            profile TEXT,
+            execution_key TEXT NOT NULL,
+            artifact_variant TEXT,
+            status TEXT NOT NULL DEFAULT 'planned',
+            attempt_count INTEGER NOT NULL DEFAULT 0,
+            started_at TIMESTAMP,
+            finished_at TIMESTAMP,
+            duration_ms DOUBLE,
+            result_json JSON NOT NULL DEFAULT '{}'::JSON,
+            error TEXT,
+            metadata_json JSON NOT NULL DEFAULT '{}'::JSON,
+            created_at TIMESTAMP DEFAULT current_timestamp,
+            updated_at TIMESTAMP DEFAULT current_timestamp,
+            UNIQUE (ingest_run_id, work_key)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ingest_page_artifacts (
+            ingest_run_id BIGINT NOT NULL,
+            file_hash TEXT NOT NULL,
+            page_no INTEGER NOT NULL,
+            variant TEXT NOT NULL,
+            page_width DOUBLE,
+            page_height DOUBLE,
+            render_width INTEGER NOT NULL,
+            render_height INTEGER NOT NULL,
+            mime_type TEXT NOT NULL,
+            image_sha256 TEXT NOT NULL,
+            cache_path TEXT,
+            source_variant TEXT,
+            metadata_json JSON NOT NULL DEFAULT '{}'::JSON,
+            created_at TIMESTAMP DEFAULT current_timestamp,
+            updated_at TIMESTAMP DEFAULT current_timestamp,
+            PRIMARY KEY (ingest_run_id, file_hash, page_no, variant)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ingest_model_leases (
+            lease_id BIGINT PRIMARY KEY,
+            ingest_run_id BIGINT NOT NULL,
+            execution_key TEXT NOT NULL,
+            provider TEXT NOT NULL,
+            model TEXT NOT NULL,
+            requested_context_tokens INTEGER,
+            verified_context_tokens INTEGER,
+            status TEXT NOT NULL,
+            started_at TIMESTAMP NOT NULL,
+            finished_at TIMESTAMP,
+            duration_ms DOUBLE,
+            error TEXT,
+            metadata_json JSON NOT NULL DEFAULT '{}'::JSON,
+            created_at TIMESTAMP DEFAULT current_timestamp
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_ingest_work_units_run_status
+        ON ingest_work_units(ingest_run_id, status)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_ingest_work_units_scope
+        ON ingest_work_units(ingest_run_id, file_hash, page_no)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_ingest_work_units_execution
+        ON ingest_work_units(ingest_run_id, execution_key, phase)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_ingest_page_artifacts_scope
+        ON ingest_page_artifacts(ingest_run_id, file_hash, page_no)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_ingest_model_leases_run
+        ON ingest_model_leases(ingest_run_id, execution_key)
+        """
+    )
+    connection.execute(
+        """
+        UPDATE app_metadata
+        SET value = '0008_ingest_work_planner', updated_at = current_timestamp
+        WHERE key = 'schema_version'
+        """
+    )
+
+
 MIGRATIONS = [
     Migration(
         migration_id="0001_ingest_search_schema",
@@ -683,5 +802,12 @@ MIGRATIONS = [
         risky=False,
         warning=None,
         apply=ingest_diagnostics_schema,
+    ),
+    Migration(
+        migration_id="0008_ingest_work_planner",
+        description="Add persisted ingest work planning and model lease state.",
+        risky=False,
+        warning=None,
+        apply=ingest_work_planner_schema,
     ),
 ]

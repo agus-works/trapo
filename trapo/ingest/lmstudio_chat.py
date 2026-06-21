@@ -15,8 +15,9 @@ from trapo.ingest.llm_diagnostics import (
     record_llm_success,
     start_llm_diagnostic_span,
 )
-from trapo.ingest.lmstudio_models import LmStudioPageResponse
-from trapo.ingest.lmstudio_prompts import SYSTEM_PROMPT
+from trapo.ingest.lmstudio_models import (
+    DEFAULT_LMSTUDIO_REPEAT_PENALTY,
+)
 from trapo.ingest.page_images import RenderedPageImage
 
 
@@ -55,9 +56,10 @@ class ChatPayloadRequest:
     prompt: str
     max_tokens: int
     temperature: float
-    schema_name: str = "trapo_page_regions"
+    repeat_penalty: float = DEFAULT_LMSTUDIO_REPEAT_PENALTY
+    schema_name: str = "trapo_llm_response"
     schema: dict[str, Any] | None = None
-    system_prompt: str = SYSTEM_PROMPT
+    system_prompt: str = "Return exactly the requested output."
     include_image: bool = True
     structured_output: bool = True
 
@@ -141,16 +143,19 @@ def chat_payload(request: ChatPayloadRequest) -> dict[str, Any]:
             },
         ],
         "temperature": request.temperature,
+        "repeat_penalty": request.repeat_penalty,
         "max_tokens": request.max_tokens,
         "stream": False,
     }
     if request.structured_output:
+        if request.schema is None:
+            raise ValueError("Structured LM Studio requests must provide a schema.")
         payload["response_format"] = {
             "type": "json_schema",
             "json_schema": {
                 "name": request.schema_name,
                 "strict": True,
-                "schema": request.schema or LmStudioPageResponse.model_json_schema(),
+                "schema": request.schema,
             },
         }
     return payload

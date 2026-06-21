@@ -24,10 +24,6 @@ from trapo.config import (
 from trapo.db import connect, is_quack_uri, table_exists
 from trapo.ingest.lmstudio_models import (
     DEFAULT_LMSTUDIO_BASE_URL,
-    DEFAULT_LMSTUDIO_CONTEXT_TOKENS,
-    DEFAULT_LMSTUDIO_MODEL,
-    DEFAULT_LMSTUDIO_ORIENTATION_MAX_SIDE,
-    DEFAULT_LMSTUDIO_ORIENTATION_MIN_CONFIDENCE,
     DEFAULT_LMSTUDIO_TIMEOUT_SECONDS,
 )
 from trapo.ingest.infinity_models import (
@@ -36,12 +32,6 @@ from trapo.ingest.infinity_models import (
     DEFAULT_INFINITY_DEVICE,
     DEFAULT_INFINITY_MODEL,
     DEFAULT_INFINITY_TORCH_DTYPE,
-)
-from trapo.ingest.lmstudio_profiles import DEFAULT_LMSTUDIO_PROFILE
-from trapo.ingest.lmstudio_smoke import (
-    SMOKE_RENDER_MAX_SIDE,
-    default_smoke_options,
-    run_lmstudio_smoke,
 )
 from trapo.ingest.page_markdown_images import (
     DEFAULT_PAGE_MARKDOWN_CACHE_ROOT,
@@ -109,18 +99,7 @@ class IngestCommandOptions:
     infinity_device: str
     infinity_torch_dtype: str
     lmstudio_base_url: str
-    lmstudio_model: str
     lmstudio_timeout_seconds: float
-    lmstudio_render_dpi: int
-    lmstudio_image_max_side: int
-    lmstudio_max_tokens: int
-    lmstudio_box_origin: str
-    lmstudio_include_evidence: bool
-    lmstudio_profiles: str
-    lmstudio_orientation: str
-    lmstudio_orientation_min_confidence: float
-    lmstudio_orientation_max_side: int
-    lmstudio_orientation_max_tokens: int
     lmstudio_maximize_context: bool
     page_markdown: bool
     page_markdown_engines: str
@@ -130,13 +109,9 @@ class IngestCommandOptions:
     page_markdown_jpeg_quality: int
     page_markdown_cache: bool
     page_markdown_cache_root: str
-    page_markdown_max_tokens: int
-    markitdown_lmstudio_ocr: bool
     markitdown_content_understanding: bool
     markitdown_cu_endpoint: str
     markitdown_cu_analyzer: str
-    fuse_regions: bool
-    fusion_profiles: str
     verbosity: int
 
 
@@ -289,81 +264,6 @@ def annotation_report(
         typer.echo(format_annotation_comparison_report(report))
 
 
-@app.command("lmstudio-smoke")
-def lmstudio_smoke(  # noqa: PLR0913
-    db: Annotated[
-        str,
-        typer.Option("--db", help="DuckDB path used for runtime configuration."),
-    ] = DEFAULT_DB_PATH,
-    lmstudio_base_url: Annotated[
-        str,
-        typer.Option(
-            "--lmstudio-base-url", help="LM Studio OpenAI-compatible base URL."
-        ),
-    ] = DEFAULT_LMSTUDIO_BASE_URL,
-    lmstudio_model: Annotated[
-        str,
-        typer.Option("--lmstudio-model", help="LM Studio vision model identifier."),
-    ] = DEFAULT_LMSTUDIO_MODEL,
-    lmstudio_timeout_seconds: Annotated[
-        float,
-        typer.Option(
-            "--lmstudio-timeout", help="LM Studio smoke request timeout in seconds."
-        ),
-    ] = DEFAULT_LMSTUDIO_TIMEOUT_SECONDS,
-    lmstudio_image_max_side: Annotated[
-        int,
-        typer.Option(
-            "--lmstudio-image-max-side",
-            help="Maximum synthetic page side sent to LM Studio.",
-        ),
-    ] = SMOKE_RENDER_MAX_SIDE,
-    lmstudio_max_tokens: Annotated[
-        int,
-        typer.Option(
-            "--lmstudio-max-tokens",
-            help="Maximum LM Studio output tokens for the smoke page.",
-        ),
-    ] = DEFAULT_LMSTUDIO_CONTEXT_TOKENS,
-) -> None:
-    """Verify LM Studio connectivity and schema-valid bbox output."""
-    config = _config(db)
-    with traced_command(
-        "lmstudio-smoke",
-        attributes=_command_attributes(
-            config,
-            lmstudio_model=lmstudio_model,
-            lmstudio_base_url=lmstudio_base_url,
-        ),
-    ):
-        try:
-            result = run_lmstudio_smoke(
-                options=default_smoke_options(
-                    base_url=lmstudio_base_url,
-                    model=lmstudio_model,
-                    timeout_seconds=lmstudio_timeout_seconds,
-                    image_max_side=lmstudio_image_max_side,
-                    max_tokens=lmstudio_max_tokens,
-                )
-            )
-        except Exception as exc:
-            typer.echo(f"LM Studio smoke failed: {exc}")
-            raise typer.Exit(code=1) from exc
-    typer.echo(
-        "LM Studio smoke ok: "
-        f"model={result.model} base_url={result.base_url} "
-        f"regions={result.region_count} elapsed={result.elapsed_seconds:.2f}s "
-        f"page_sha256={result.page_sha256}"
-    )
-    for region in result.regions:
-        typer.echo(
-            "  region: "
-            f"kind={region.region_kind} label={region.label} "
-            f"text={region.text!r} box_2d={region.box_2d} "
-            f"confidence={region.confidence}"
-        )
-
-
 @app.command("skylos-check")
 def skylos_check(  # noqa: PLR0913
     path: Annotated[
@@ -514,7 +414,7 @@ def ingest(  # noqa: PLR0913
         str,
         typer.Option(
             "--annotation-engines",
-            help="Comma-separated annotation engines: docling, mineru, lmstudio, infinity, or all.",
+            help="Comma-separated annotation engines: docling, mineru, infinity, normalized, or all.",
         ),
     ] = "docling,mineru",
     mineru_backend: Annotated[
@@ -570,86 +470,17 @@ def ingest(  # noqa: PLR0913
     lmstudio_base_url: Annotated[
         str,
         typer.Option(
-            "--lmstudio-base-url", help="LM Studio OpenAI-compatible base URL."
+            "--lmstudio-base-url",
+            help="LM Studio OpenAI-compatible base URL for Infinity's LM Studio backend.",
         ),
-    ] = "http://localhost:1234/v1",
-    lmstudio_model: Annotated[
-        str,
-        typer.Option("--lmstudio-model", help="LM Studio vision model identifier."),
-    ] = "google/gemma-4-26b-a4b-qat",
+    ] = DEFAULT_LMSTUDIO_BASE_URL,
     lmstudio_timeout_seconds: Annotated[
         float,
         typer.Option(
-            "--lmstudio-timeout", help="LM Studio per-page request timeout in seconds."
+            "--lmstudio-timeout",
+            help="LM Studio request timeout in seconds for Infinity's LM Studio backend.",
         ),
-    ] = 240.0,
-    lmstudio_render_dpi: Annotated[
-        int,
-        typer.Option(
-            "--lmstudio-render-dpi", help="PDF render DPI for LM Studio page images."
-        ),
-    ] = 200,
-    lmstudio_image_max_side: Annotated[
-        int,
-        typer.Option(
-            "--lmstudio-image-max-side",
-            help="Maximum rendered image side sent to LM Studio.",
-        ),
-    ] = 2048,
-    lmstudio_max_tokens: Annotated[
-        int,
-        typer.Option(
-            "--lmstudio-max-tokens", help="Maximum LM Studio output tokens per page."
-        ),
-    ] = DEFAULT_LMSTUDIO_CONTEXT_TOKENS,
-    lmstudio_box_origin: Annotated[
-        str,
-        typer.Option(
-            "--lmstudio-box-origin",
-            help="LM Studio y-axis origin for box_2d values: bottomleft or topleft.",
-        ),
-    ] = "bottomleft",
-    lmstudio_include_evidence: Annotated[
-        bool,
-        typer.Option(
-            "--lmstudio-evidence/--lmstudio-no-evidence",
-            help="Include Docling/MinerU region hints in LM Studio page prompts.",
-        ),
-    ] = False,
-    lmstudio_profiles: Annotated[
-        str,
-        typer.Option(
-            "--lmstudio-profiles",
-            help="Comma-separated LM Studio prompt profiles: balanced, strict, recall, or all.",
-        ),
-    ] = DEFAULT_LMSTUDIO_PROFILE,
-    lmstudio_orientation: Annotated[
-        str,
-        typer.Option(
-            "--lmstudio-orientation", help="Image orientation preflight: auto or off."
-        ),
-    ] = "auto",
-    lmstudio_orientation_min_confidence: Annotated[
-        float,
-        typer.Option(
-            "--lmstudio-orientation-min-confidence",
-            help="Minimum confidence required to store an automatic rotation override.",
-        ),
-    ] = DEFAULT_LMSTUDIO_ORIENTATION_MIN_CONFIDENCE,
-    lmstudio_orientation_max_side: Annotated[
-        int,
-        typer.Option(
-            "--lmstudio-orientation-max-side",
-            help="Maximum rendered image side for LM Studio orientation preflight.",
-        ),
-    ] = DEFAULT_LMSTUDIO_ORIENTATION_MAX_SIDE,
-    lmstudio_orientation_max_tokens: Annotated[
-        int,
-        typer.Option(
-            "--lmstudio-orientation-max-tokens",
-            help="Maximum LM Studio output tokens for orientation preflight.",
-        ),
-    ] = DEFAULT_LMSTUDIO_CONTEXT_TOKENS,
+    ] = DEFAULT_LMSTUDIO_TIMEOUT_SECONDS,
     lmstudio_maximize_context: Annotated[
         bool,
         typer.Option(
@@ -668,9 +499,9 @@ def ingest(  # noqa: PLR0913
         str,
         typer.Option(
             "--page-markdown-engines",
-            help="Comma-separated Markdown generators: lmstudio_markdown, markitdown, markitdown_cu, infinity_markdown, or all.",
+            help="Comma-separated Markdown generators: infinity_markdown, markitdown, markitdown_cu, or all.",
         ),
-    ] = "markitdown",
+    ] = "infinity_markdown",
     page_markdown_render_dpi: Annotated[
         int,
         typer.Option(
@@ -682,7 +513,7 @@ def ingest(  # noqa: PLR0913
         int,
         typer.Option(
             "--page-markdown-image-max-side",
-            help="Maximum rendered page side sent to LM Studio for page Markdown.",
+            help="Maximum rendered page side for page Markdown image prompts.",
         ),
     ] = DEFAULT_PAGE_MARKDOWN_IMAGE_MAX_SIDE,
     page_markdown_image_format: Annotated[
@@ -713,23 +544,6 @@ def ingest(  # noqa: PLR0913
             help="Directory for cached page Markdown prompt images and metadata.",
         ),
     ] = DEFAULT_PAGE_MARKDOWN_CACHE_ROOT,
-    page_markdown_max_tokens: Annotated[
-        int,
-        typer.Option(
-            "--page-markdown-max-tokens",
-            help=(
-                "Maximum LM Studio output tokens for each generated Markdown page. "
-                "The default auto-expands to the detected LM Studio context budget."
-            ),
-        ),
-    ] = DEFAULT_LMSTUDIO_CONTEXT_TOKENS,
-    markitdown_lmstudio_ocr: Annotated[
-        bool,
-        typer.Option(
-            "--markitdown-lmstudio-ocr/--no-markitdown-lmstudio-ocr",
-            help="Give MarkItDown's OCR plugin the configured LM Studio vision model.",
-        ),
-    ] = False,
     markitdown_content_understanding: Annotated[
         bool,
         typer.Option(
@@ -751,20 +565,6 @@ def ingest(  # noqa: PLR0913
             help="Optional Azure Content Understanding analyzer id.",
         ),
     ] = "",
-    fuse_regions: Annotated[
-        bool,
-        typer.Option(
-            "--fuse-regions/--no-fuse-regions",
-            help="Build deterministic fused overlays from available annotation engines.",
-        ),
-    ] = True,
-    fusion_profiles: Annotated[
-        str,
-        typer.Option(
-            "--fusion-profiles",
-            help="Comma-separated fusion profiles: conservative, balanced, recall, or all.",
-        ),
-    ] = "balanced",
     verbosity: Annotated[
         int,
         typer.Option(
@@ -804,18 +604,7 @@ def ingest(  # noqa: PLR0913
             infinity_device=infinity_device,
             infinity_torch_dtype=infinity_torch_dtype,
             lmstudio_base_url=lmstudio_base_url,
-            lmstudio_model=lmstudio_model,
             lmstudio_timeout_seconds=lmstudio_timeout_seconds,
-            lmstudio_render_dpi=lmstudio_render_dpi,
-            lmstudio_image_max_side=lmstudio_image_max_side,
-            lmstudio_max_tokens=lmstudio_max_tokens,
-            lmstudio_box_origin=lmstudio_box_origin,
-            lmstudio_include_evidence=lmstudio_include_evidence,
-            lmstudio_profiles=lmstudio_profiles,
-            lmstudio_orientation=lmstudio_orientation,
-            lmstudio_orientation_min_confidence=lmstudio_orientation_min_confidence,
-            lmstudio_orientation_max_side=lmstudio_orientation_max_side,
-            lmstudio_orientation_max_tokens=lmstudio_orientation_max_tokens,
             lmstudio_maximize_context=lmstudio_maximize_context,
             page_markdown=page_markdown,
             page_markdown_engines=page_markdown_engines,
@@ -825,13 +614,9 @@ def ingest(  # noqa: PLR0913
             page_markdown_jpeg_quality=page_markdown_jpeg_quality,
             page_markdown_cache=page_markdown_cache,
             page_markdown_cache_root=page_markdown_cache_root,
-            page_markdown_max_tokens=page_markdown_max_tokens,
-            markitdown_lmstudio_ocr=markitdown_lmstudio_ocr,
             markitdown_content_understanding=markitdown_content_understanding,
             markitdown_cu_endpoint=markitdown_cu_endpoint,
             markitdown_cu_analyzer=markitdown_cu_analyzer,
-            fuse_regions=fuse_regions,
-            fusion_profiles=fusion_profiles,
             verbosity=verbosity,
         ),
     )
@@ -927,7 +712,7 @@ def pipeline_read(  # noqa: PLR0913
         str,
         typer.Option(
             "--annotation-engines",
-            help="Comma-separated annotation engines: docling, mineru, lmstudio, infinity, or all.",
+            help="Comma-separated annotation engines: docling, mineru, infinity, normalized, or all.",
         ),
     ] = "docling,mineru",
     mineru_backend: Annotated[
@@ -983,86 +768,17 @@ def pipeline_read(  # noqa: PLR0913
     lmstudio_base_url: Annotated[
         str,
         typer.Option(
-            "--lmstudio-base-url", help="LM Studio OpenAI-compatible base URL."
+            "--lmstudio-base-url",
+            help="LM Studio OpenAI-compatible base URL for Infinity's LM Studio backend.",
         ),
-    ] = "http://localhost:1234/v1",
-    lmstudio_model: Annotated[
-        str,
-        typer.Option("--lmstudio-model", help="LM Studio vision model identifier."),
-    ] = "google/gemma-4-26b-a4b-qat",
+    ] = DEFAULT_LMSTUDIO_BASE_URL,
     lmstudio_timeout_seconds: Annotated[
         float,
         typer.Option(
-            "--lmstudio-timeout", help="LM Studio per-page request timeout in seconds."
+            "--lmstudio-timeout",
+            help="LM Studio request timeout in seconds for Infinity's LM Studio backend.",
         ),
-    ] = 240.0,
-    lmstudio_render_dpi: Annotated[
-        int,
-        typer.Option(
-            "--lmstudio-render-dpi", help="PDF render DPI for LM Studio page images."
-        ),
-    ] = 200,
-    lmstudio_image_max_side: Annotated[
-        int,
-        typer.Option(
-            "--lmstudio-image-max-side",
-            help="Maximum rendered image side sent to LM Studio.",
-        ),
-    ] = 2048,
-    lmstudio_max_tokens: Annotated[
-        int,
-        typer.Option(
-            "--lmstudio-max-tokens", help="Maximum LM Studio output tokens per page."
-        ),
-    ] = DEFAULT_LMSTUDIO_CONTEXT_TOKENS,
-    lmstudio_box_origin: Annotated[
-        str,
-        typer.Option(
-            "--lmstudio-box-origin",
-            help="LM Studio y-axis origin for box_2d values: bottomleft or topleft.",
-        ),
-    ] = "bottomleft",
-    lmstudio_include_evidence: Annotated[
-        bool,
-        typer.Option(
-            "--lmstudio-evidence/--lmstudio-no-evidence",
-            help="Include Docling/MinerU region hints in LM Studio page prompts.",
-        ),
-    ] = True,
-    lmstudio_profiles: Annotated[
-        str,
-        typer.Option(
-            "--lmstudio-profiles",
-            help="Comma-separated LM Studio prompt profiles: balanced, strict, recall, or all.",
-        ),
-    ] = DEFAULT_LMSTUDIO_PROFILE,
-    lmstudio_orientation: Annotated[
-        str,
-        typer.Option(
-            "--lmstudio-orientation", help="Image orientation preflight: auto or off."
-        ),
-    ] = "auto",
-    lmstudio_orientation_min_confidence: Annotated[
-        float,
-        typer.Option(
-            "--lmstudio-orientation-min-confidence",
-            help="Minimum confidence required to store an automatic rotation override.",
-        ),
-    ] = DEFAULT_LMSTUDIO_ORIENTATION_MIN_CONFIDENCE,
-    lmstudio_orientation_max_side: Annotated[
-        int,
-        typer.Option(
-            "--lmstudio-orientation-max-side",
-            help="Maximum rendered image side for LM Studio orientation preflight.",
-        ),
-    ] = DEFAULT_LMSTUDIO_ORIENTATION_MAX_SIDE,
-    lmstudio_orientation_max_tokens: Annotated[
-        int,
-        typer.Option(
-            "--lmstudio-orientation-max-tokens",
-            help="Maximum LM Studio output tokens for orientation preflight.",
-        ),
-    ] = DEFAULT_LMSTUDIO_CONTEXT_TOKENS,
+    ] = DEFAULT_LMSTUDIO_TIMEOUT_SECONDS,
     lmstudio_maximize_context: Annotated[
         bool,
         typer.Option(
@@ -1081,9 +797,9 @@ def pipeline_read(  # noqa: PLR0913
         str,
         typer.Option(
             "--page-markdown-engines",
-            help="Comma-separated Markdown generators: lmstudio_markdown, markitdown, markitdown_cu, infinity_markdown, or all.",
+            help="Comma-separated Markdown generators: infinity_markdown, markitdown, markitdown_cu, or all.",
         ),
-    ] = "markitdown",
+    ] = "infinity_markdown",
     page_markdown_render_dpi: Annotated[
         int,
         typer.Option(
@@ -1095,7 +811,7 @@ def pipeline_read(  # noqa: PLR0913
         int,
         typer.Option(
             "--page-markdown-image-max-side",
-            help="Maximum rendered page side sent to LM Studio for page Markdown.",
+            help="Maximum rendered page side for page Markdown image prompts.",
         ),
     ] = DEFAULT_PAGE_MARKDOWN_IMAGE_MAX_SIDE,
     page_markdown_image_format: Annotated[
@@ -1126,23 +842,6 @@ def pipeline_read(  # noqa: PLR0913
             help="Directory for cached page Markdown prompt images and metadata.",
         ),
     ] = DEFAULT_PAGE_MARKDOWN_CACHE_ROOT,
-    page_markdown_max_tokens: Annotated[
-        int,
-        typer.Option(
-            "--page-markdown-max-tokens",
-            help=(
-                "Maximum LM Studio output tokens for each generated Markdown page. "
-                "The default auto-expands to the detected LM Studio context budget."
-            ),
-        ),
-    ] = DEFAULT_LMSTUDIO_CONTEXT_TOKENS,
-    markitdown_lmstudio_ocr: Annotated[
-        bool,
-        typer.Option(
-            "--markitdown-lmstudio-ocr/--no-markitdown-lmstudio-ocr",
-            help="Give MarkItDown's OCR plugin the configured LM Studio vision model.",
-        ),
-    ] = False,
     markitdown_content_understanding: Annotated[
         bool,
         typer.Option(
@@ -1164,20 +863,6 @@ def pipeline_read(  # noqa: PLR0913
             help="Optional Azure Content Understanding analyzer id.",
         ),
     ] = "",
-    fuse_regions: Annotated[
-        bool,
-        typer.Option(
-            "--fuse-regions/--no-fuse-regions",
-            help="Build deterministic fused overlays from available annotation engines.",
-        ),
-    ] = True,
-    fusion_profiles: Annotated[
-        str,
-        typer.Option(
-            "--fusion-profiles",
-            help="Comma-separated fusion profiles: conservative, balanced, recall, or all.",
-        ),
-    ] = "balanced",
     verbosity: Annotated[
         int,
         typer.Option("--verbose", "-v", count=True, help="Increase verbosity."),
@@ -1212,18 +897,7 @@ def pipeline_read(  # noqa: PLR0913
             infinity_device=infinity_device,
             infinity_torch_dtype=infinity_torch_dtype,
             lmstudio_base_url=lmstudio_base_url,
-            lmstudio_model=lmstudio_model,
             lmstudio_timeout_seconds=lmstudio_timeout_seconds,
-            lmstudio_render_dpi=lmstudio_render_dpi,
-            lmstudio_image_max_side=lmstudio_image_max_side,
-            lmstudio_max_tokens=lmstudio_max_tokens,
-            lmstudio_box_origin=lmstudio_box_origin,
-            lmstudio_include_evidence=lmstudio_include_evidence,
-            lmstudio_profiles=lmstudio_profiles,
-            lmstudio_orientation=lmstudio_orientation,
-            lmstudio_orientation_min_confidence=lmstudio_orientation_min_confidence,
-            lmstudio_orientation_max_side=lmstudio_orientation_max_side,
-            lmstudio_orientation_max_tokens=lmstudio_orientation_max_tokens,
             lmstudio_maximize_context=lmstudio_maximize_context,
             page_markdown=page_markdown,
             page_markdown_engines=page_markdown_engines,
@@ -1233,13 +907,9 @@ def pipeline_read(  # noqa: PLR0913
             page_markdown_jpeg_quality=page_markdown_jpeg_quality,
             page_markdown_cache=page_markdown_cache,
             page_markdown_cache_root=page_markdown_cache_root,
-            page_markdown_max_tokens=page_markdown_max_tokens,
-            markitdown_lmstudio_ocr=markitdown_lmstudio_ocr,
             markitdown_content_understanding=markitdown_content_understanding,
             markitdown_cu_endpoint=markitdown_cu_endpoint,
             markitdown_cu_analyzer=markitdown_cu_analyzer,
-            fuse_regions=fuse_regions,
-            fusion_profiles=fusion_profiles,
             verbosity=verbosity,
         ),
     )
@@ -1273,11 +943,7 @@ def _run_ingest(
             infinity_model=command_options.infinity_model,
             infinity_backend=command_options.infinity_backend,
             infinity_batch_size=command_options.infinity_batch_size,
-            lmstudio_model=command_options.lmstudio_model,
             lmstudio_base_url=command_options.lmstudio_base_url,
-            lmstudio_box_origin=command_options.lmstudio_box_origin,
-            lmstudio_profiles=command_options.lmstudio_profiles,
-            lmstudio_orientation=command_options.lmstudio_orientation,
             lmstudio_maximize_context=command_options.lmstudio_maximize_context,
             page_markdown=command_options.page_markdown,
             page_markdown_engines=command_options.page_markdown_engines,
@@ -1287,10 +953,7 @@ def _run_ingest(
             page_markdown_jpeg_quality=command_options.page_markdown_jpeg_quality,
             page_markdown_cache=command_options.page_markdown_cache,
             page_markdown_cache_root=command_options.page_markdown_cache_root,
-            markitdown_lmstudio_ocr=command_options.markitdown_lmstudio_ocr,
             markitdown_content_understanding=command_options.markitdown_content_understanding,
-            fuse_regions=command_options.fuse_regions,
-            fusion_profiles=command_options.fusion_profiles,
         ),
     ):
         initialize_database(config)
@@ -1318,18 +981,7 @@ def _run_ingest(
             infinity_device=command_options.infinity_device,
             infinity_torch_dtype=command_options.infinity_torch_dtype,
             lmstudio_base_url=command_options.lmstudio_base_url,
-            lmstudio_model=command_options.lmstudio_model,
             lmstudio_timeout_seconds=command_options.lmstudio_timeout_seconds,
-            lmstudio_render_dpi=command_options.lmstudio_render_dpi,
-            lmstudio_image_max_side=command_options.lmstudio_image_max_side,
-            lmstudio_max_tokens=command_options.lmstudio_max_tokens,
-            lmstudio_box_origin=command_options.lmstudio_box_origin,
-            lmstudio_include_evidence=command_options.lmstudio_include_evidence,
-            lmstudio_profiles=command_options.lmstudio_profiles,
-            lmstudio_orientation=command_options.lmstudio_orientation,
-            lmstudio_orientation_min_confidence=command_options.lmstudio_orientation_min_confidence,
-            lmstudio_orientation_max_side=command_options.lmstudio_orientation_max_side,
-            lmstudio_orientation_max_tokens=command_options.lmstudio_orientation_max_tokens,
             lmstudio_maximize_context=command_options.lmstudio_maximize_context,
             page_markdown=command_options.page_markdown,
             page_markdown_engines=command_options.page_markdown_engines,
@@ -1339,13 +991,9 @@ def _run_ingest(
             page_markdown_jpeg_quality=command_options.page_markdown_jpeg_quality,
             page_markdown_cache=command_options.page_markdown_cache,
             page_markdown_cache_root=command_options.page_markdown_cache_root,
-            page_markdown_max_tokens=command_options.page_markdown_max_tokens,
-            markitdown_lmstudio_ocr=command_options.markitdown_lmstudio_ocr,
             markitdown_content_understanding=command_options.markitdown_content_understanding,
             markitdown_cu_endpoint=command_options.markitdown_cu_endpoint,
             markitdown_cu_analyzer=command_options.markitdown_cu_analyzer,
-            fuse_regions=command_options.fuse_regions,
-            fusion_profiles=command_options.fusion_profiles,
             verbosity=command_options.verbosity,
         )
         with connect(config.db_path) as connection:

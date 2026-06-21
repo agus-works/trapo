@@ -35,10 +35,6 @@ MARKITDOWN_CU_MODEL = "markitdown-content-understanding"
 _PAGE_MARKER_RE = re.compile(
     r"(?im)^\s*(?:#{1,6}\s*Page\s+(\d+)|<!--\s*page\s+(\d+)\s*-->)\s*$"
 )
-_MARKITDOWN_OCR_PROMPT = (
-    "Extract only the readable text from this document image. Preserve reading "
-    "order, tables, headings, and lists where clear. Do not add commentary."
-)
 
 
 def process_markitdown_markdown(  # noqa: PLR0913
@@ -64,7 +60,6 @@ def process_markitdown_markdown(  # noqa: PLR0913
             "markdown.provider": provider,
             "markdown.model": model,
             "markitdown.content_understanding": use_cu,
-            "markitdown.lmstudio_ocr": options.markitdown_lmstudio_ocr,
         },
     ) as span:
         started_at = time.perf_counter()
@@ -159,22 +154,6 @@ def _create_markitdown_converter(
         metadata = {"mode": "content_understanding", "cu_analyzer": analyzer}
         return MarkItDown(enable_plugins=False, **kwargs), metadata
 
-    client = (
-        _lmstudio_openai_client(options) if options.markitdown_lmstudio_ocr else None
-    )
-    if client is not None:
-        kwargs.update(
-            {
-                "llm_client": client,
-                "llm_model": options.lmstudio_model,
-                "llm_prompt": _MARKITDOWN_OCR_PROMPT,
-            }
-        )
-        metadata = {
-            "mode": "local_lmstudio_ocr",
-            "lmstudio_model": options.lmstudio_model,
-            "lmstudio_base_url": options.lmstudio_base_url,
-        }
     markitdown = MarkItDown(enable_plugins=False, **kwargs)
     _register_ocr_plugin(markitdown, kwargs)
     return markitdown, metadata
@@ -197,18 +176,6 @@ def _convert_page_images_with_markitdown(
         "normalized_image_input": True,
         "markitdown_inputs": [item.metadata for item in conversion_inputs],
     }
-
-
-def _lmstudio_openai_client(options: IngestOptions) -> Any:
-    from openai import OpenAI  # noqa: PLC0415
-
-    return OpenAI(
-        api_key=os.environ.get("LMSTUDIO_API_KEY")
-        or os.environ.get("OPENAI_API_KEY")
-        or "lm-studio",
-        base_url=options.lmstudio_base_url,
-        timeout=options.lmstudio_timeout_seconds,
-    )
 
 
 def _register_ocr_plugin(markitdown: Any, kwargs: dict[str, Any]) -> None:

@@ -41,7 +41,7 @@ function DocumentControlsShowcase() {
   const [markdownEngine, setMarkdownEngine] = useState('best_available_markdown');
   const [engineVisibility, setEngineVisibility] = useState<Record<string, boolean>>({
     docling: true,
-    fusion: true,
+    infinity: true,
     mineru: true,
   });
 
@@ -64,7 +64,7 @@ function DocumentControlsShowcase() {
           rightPanel={null}
         />
         <PdfPreviewToolbar
-          annotationEngines={['fusion', 'docling', 'mineru']}
+          annotationEngines={['infinity', 'docling', 'mineru']}
           currentPage={page}
           engineVisibility={engineVisibility}
           markdownEngine={markdownEngine}

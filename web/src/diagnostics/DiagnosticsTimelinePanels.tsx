@@ -1,5 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 import type { CSSProperties, RefObject } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../components/ui/resizable';
@@ -21,6 +21,8 @@ interface DiagnosticsTimelinePanelsProps {
   selectedId: string | null;
   selectedSpan: DiagnosticSpanRecord | null;
   summary: DiagnosticTraceSummary | null;
+  traceError?: string | null;
+  traceLoading?: boolean;
   onSpanSelect: (spanId: string) => void;
 }
 
@@ -30,10 +32,13 @@ export function DiagnosticsTimelinePanels({
   selectedId,
   selectedSpan,
   summary,
+  traceError = null,
+  traceLoading = false,
   onSpanSelect,
 }: DiagnosticsTimelinePanelsProps) {
   const [collapsedIds, setCollapsedIds] = useState(() => new Set<string>());
   const renderedRows = useMemo(() => visibleRows(rows, collapsedIds), [collapsedIds, rows]);
+  const panelState = timelinePanelState(traceLoading, traceError, rows.length);
   const toggleCollapsed = (spanId: string) => {
     setCollapsedIds((current) => {
       const next = new Set(current);
@@ -52,18 +57,16 @@ export function DiagnosticsTimelinePanels({
           <span>Pipeline step</span>
           <span>Elapsed time · {formatMs(summary?.duration_ms ?? 0)}</span>
         </div>
-        <TimelineRowsViewport
-          collapsedIds={collapsedIds}
-          onSpanSelect={onSpanSelect}
-          onToggleCollapsed={toggleCollapsed}
-          rows={renderedRows}
-          selectedId={selectedId}
-        />
-        {rows.length === 0 && (
-          <div className={styles.emptyState}>
-            <AlertTriangle size={18} />
-            No diagnostics found for this scope.
-          </div>
+        {panelState ? (
+          <TimelinePanelState state={panelState} />
+        ) : (
+          <TimelineRowsViewport
+            collapsedIds={collapsedIds}
+            onSpanSelect={onSpanSelect}
+            onToggleCollapsed={toggleCollapsed}
+            rows={renderedRows}
+            selectedId={selectedId}
+          />
         )}
       </ResizablePanel>
       <ResizableHandle orientation="horizontal" />
@@ -71,6 +74,45 @@ export function DiagnosticsTimelinePanels({
         <DiagnosticsDetailsPane events={events} span={selectedSpan} />
       </ResizablePanel>
     </ResizablePanelGroup>
+  );
+}
+
+type TimelinePanelStateKind = 'empty' | 'error' | 'loading';
+
+interface TimelinePanelStateRecord {
+  kind: TimelinePanelStateKind;
+  message: string;
+}
+
+function timelinePanelState(
+  traceLoading: boolean,
+  traceError: string | null,
+  rowCount: number,
+): TimelinePanelStateRecord | null {
+  if (traceError) {
+    return { kind: 'error', message: traceError };
+  }
+  if (traceLoading && rowCount === 0) {
+    return { kind: 'loading', message: 'Loading diagnostics waterfall...' };
+  }
+  if (rowCount === 0) {
+    return { kind: 'empty', message: 'No diagnostics found for this scope.' };
+  }
+  return null;
+}
+
+function TimelinePanelState({ state }: { state: TimelinePanelStateRecord }) {
+  const icon =
+    state.kind === 'loading' ? (
+      <Loader2 className={styles.stateIconSpin} size={18} />
+    ) : (
+      <AlertTriangle size={18} />
+    );
+  return (
+    <div className={styles.emptyState} data-state={state.kind}>
+      {icon}
+      <span>{state.message}</span>
+    </div>
   );
 }
 

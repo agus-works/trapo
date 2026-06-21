@@ -33,6 +33,10 @@ def lmstudio_model_lease(  # noqa: PLR0913
         enabled=enabled,
         log=log,
     )
+    if enabled and context_info.load_status == "verification_failed":
+        raise RuntimeError(
+            context_info.error or "LM Studio context verification failed."
+        )
     try:
         yield context_info
     finally:

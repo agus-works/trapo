@@ -13,16 +13,12 @@ Primary source files:
 
 - Docling: `docling/datamodel/base_models.py`, `docling/document_converter.py`, `docs/usage/supported_formats.md`, `docling/pipeline/asr_pipeline.py`.
 - MinerU: `mineru/cli/common.py`, `mineru/utils/guess_suffix_or_lang.py`, `mineru/cli/fast_api.py`, `docs/en/usage/quick_usage.md`, `docs/en/reference/output_files.md`.
-- LM Studio: OpenAI-compatible `/v1/chat/completions` with image input and
-  JSON schema response format. Trapo treats it as a local third annotation
-  backend, not as the source for search chunking.
-  The page Markdown pass uses MarkItDown by default to create lightweight
-  per-page Markdown for the web split preview. `lmstudio_markdown` is opt-in
-  through `--page-markdown-engines` because reasoning-heavy local models can
-  exhaust their response token budget without returning usable Markdown.
-  MarkItDown's LM Studio OCR plugin is also opt-in through
-  `--markitdown-lmstudio-ocr`. Use `--no-page-markdown` to skip the pass
-  entirely.
+- Infinity Parser2: `infly/Infinity-Parser2-Flash` through the local
+  `infinity_parser2` package, the isolated `uvx --from infinity-parser2`
+  fallback, or LM Studio when `--infinity-backend lmstudio` is selected. Trapo
+  stores Infinity Parser2 document regions under `annotation_engine =
+  'infinity'` and page Markdown under `markdown_engine = 'infinity_markdown'`.
+  Use `--no-page-markdown` to skip the Markdown pass entirely.
 
 ## Supported Input Types
 
@@ -139,7 +135,7 @@ MinerU coordinate and schema details:
 - `content_list.json`: flat reading-order blocks with `page_idx`, `bbox` normalized to `[0,1000]`, and content-specific fields such as `text`, `img_path`, `table_body`, `image_caption`, `table_footnote`, `code_body`, `list_items`.
 - `content_list_v2.json`: page-grouped lists of `{type, content, bbox, anchor}` with structured spans. Treat as experimental/development.
 - Image inputs use two page spaces: MinerU's generated PDF page (for example, a 1415x350 PNG saved at 200 DPI becomes about 509x126 PDF points) and Trapo's displayed original image page. Store and serve MinerU boxes in the displayed page space, while preserving the original `content_list` or `middle.json` bbox in metadata.
-- For raster image previews, prefer the image's display metadata over engine page metadata. EXIF orientation is an explicit display transform and can be applied to source-space boxes. The preview API renders the first image frame as a normalized PNG so the browser and overlay layer use the same oriented pixels. Pixel-only rotation without EXIF is not knowable from dimensions alone; fixing that requires OCR/image orientation detection or a persisted user rotation override. Store overrides in `page_orientation_overrides.clockwise_degrees`; the value is applied after EXIF orientation and before serving preview pixels, normalizing Docling/LM Studio boxes, repairing MinerU boxes, and fusing regions. With `--annotation-engines lmstudio` or `all`, `--lmstudio-orientation auto` runs a strict JSON orientation preflight before the region pass and writes high-confidence decisions to the same table without replacing manual overrides. If the VLM is uncertain but Docling produced many tall vertical text boxes on one side of a no-EXIF image, Trapo stores a `docling_layout_heuristic` override before MinerU, LM Studio regions, and fusion run; left-side vertical text maps to a 270 degree clockwise correction, while right-side vertical text maps to 90 degrees.
+- For raster image previews, prefer the image's display metadata over engine page metadata. EXIF orientation is an explicit display transform and can be applied to source-space boxes. The preview API renders the first image frame as a normalized PNG so the browser and overlay layer use the same oriented pixels. Pixel-only rotation without EXIF is not knowable from dimensions alone; fixing that requires OCR/image orientation detection or a persisted user rotation override. Store overrides in `page_orientation_overrides.clockwise_degrees`; the value is applied after EXIF orientation and before serving preview pixels, normalizing Docling/Infinity boxes, and repairing MinerU boxes. If Docling produced many tall vertical text boxes on one side of a no-EXIF image, Trapo stores a `docling_layout_heuristic` override before MinerU and Infinity regions run; left-side vertical text maps to a 270 degree clockwise correction, while right-side vertical text maps to 90 degrees.
 
 ### Normalized page-image engines
 
@@ -159,7 +155,7 @@ preview and overlay math.
 - Results are persisted to `ocr_documents` and `document_regions` under the
   normalized engine names, leaving base `docling` and `mineru` rows available
   for comparison.
-- The `all` alias intentionally remains `docling,mineru,lmstudio`; request
+- The `all` alias expands to `docling,mineru,infinity`; request
   `normalized` explicitly when page-image OCR overlays are needed.
 
 ### OCR memory controls
@@ -184,59 +180,31 @@ directly to stderr. Trapo filters only that exact known-noisy message around
 Docling and MinerU engine calls; real stage failures and other stderr output
 remain visible and are persisted through ingest error handling.
 
-### LM Studio
+### Infinity Parser2
 
-The LM Studio backend renders source files page-by-page, sends one page image per
-local OpenAI-compatible request, and stores the model's strict JSON result in
-`ocr_documents` plus normalized page regions in `document_regions`.
+Infinity Parser2 is the active local VLM/parser backend. It stores normalized
+document regions in `document_regions` and raw parser output in `ocr_documents`
+under `annotation_engine = 'infinity'`.
 
-- PDF pages are rendered with PDFium at configurable DPI.
-- TIFF, GIF, WEBP, JPEG, and PNG inputs are split with Pillow `ImageSequence`;
-  EXIF orientation is applied before the page image is sent.
-- Image inputs can run a lightweight LM Studio orientation preflight before the
-  region pass. The preflight renders each frame with EXIF applied but no manual
-  rotation, asks for the clockwise correction needed to make text upright, and
-  stores accepted decisions in `page_orientation_overrides`.
-- The model returns `box_2d` as `[y0, left, y1, right]` on a `[0,1000]`
-  grid. The observed Gemma/LM Studio convention uses a bottom-origin y-axis, so
-  Trapo defaults `box_2d_coord_origin` to `BOTTOMLEFT` and converts into
-  absolute top-left page coordinates before persisting.
-- Existing Docling/MinerU regions are included as compact evidence hints when
-  available. The LM Studio prompt tells the model to use the visible page image
-  as the final authority and copy source region ids only when they helped.
-- `--lmstudio-profiles balanced` is the default and stores the canonical output
-  under `annotation_engine = 'lmstudio'`. `--lmstudio-profiles all` also runs
-  `strict` and `recall`, storing alternatives under `lmstudio_strict` and
-  `lmstudio_recall` so the same page can be compared without changing the
-  normalized region contract.
-- After raw engines finish, Trapo can build deterministic fused regions from
-  Docling, MinerU, and LM Studio outputs. Fused rows use
-  `annotation_engine = 'fusion'` for the balanced profile, preserve source
-  region IDs, and mark which source boxes contributed to the final bbox. The
-  fused raw JSON includes `agreement_summary` so downstream review can separate
-  all-engine agreement, partial agreement, and single-engine-only regions.
-  Additional profiles can be emitted as `fusion_conservative` and
-  `fusion_recall` for comparison without rerunning raw engines.
-- The integration assumes LM Studio owns GPU scheduling/offload. On the target
-  Windows 11 + RTX 5090 workstation, keep the model loaded in LM Studio with GPU
-  offload enabled; Trapo sends sequential page requests for deterministic local
-  resource use.
-- `--lmstudio-timeout` controls the per-page read timeout for the non-streamed
-  `/v1/chat/completions` response and defaults to 900 seconds. Connection,
-  write, and pool timeouts remain short so unreachable LM Studio servers fail
-  promptly while slow page generations can complete.
-- The region pass is a single typed page-agent. Later variants can add competing
-  prompt configurations or Pydantic-AI reviewers, but final boxes should still
-  be normalized into the same `document_regions` contract so results remain
-  comparable across engines.
-- By default, Trapo runs a separate page workflow after annotations and fusion:
-  MarkItDown creates page Markdown and stores the text in
-  `document_page_markdown`. Optional `lmstudio_markdown` renders each source
-  page or image frame as a small JPEG and asks LM Studio for raw Markdown. Page
-  failures are isolated: a failed optional generator page is logged and later
-  pages continue. MarkItDown does not call LM Studio unless
-  `--markitdown-lmstudio-ocr` is set. Use `--no-page-markdown` when you only
-  want OCR/overlay outputs.
+- The annotation engine reads normalized preview JPG artifacts so its boxes
+  align with the web preview.
+- Parser boxes are stored with the parsed page dimensions in metadata, and the
+  region API normalizes overlays against those dimensions.
+- Page Markdown uses the same page artifact cache and stores rows under
+  `markdown_engine = 'infinity_markdown'`.
+- `--infinity-backend lmstudio` routes Infinity Parser2 Flash through LM
+  Studio's OpenAI-compatible API. In that mode, Trapo uses LM Studio's native
+  model API to load `infinity-parser2-flash` at the allowlisted maximum context
+  before the chat calls run.
+- `--lmstudio-timeout` controls the non-streamed read timeout for LM
+  Studio-backed Infinity calls. Connection, write, and pool timeouts remain
+  short so unreachable LM Studio servers fail promptly while slow generations
+  can complete.
+- If an Infinity batch fails, Trapo retries pages independently where possible
+  and records failed pages without discarding successful pages from the same
+  document.
+- Active region comparison is per-engine: Docling, MinerU, and Infinity rows
+  remain separate so the viewer and reports can compare their outputs directly.
 
 ## DuckDB Persistence Plan
 

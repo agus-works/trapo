@@ -116,10 +116,10 @@ file/page waterfall views.
 The local diagnostics store is intentionally post-run for v1. It records
 timings and sanitized failure details for pipeline steps, engines, provider
 calls, preview rendering, normalized page processing, page Markdown, and region
-rebuilds. LM Studio calls additionally record local-only diagnostic details:
-prompt text, request parameters, sanitized payload JSON, filesystem paths for
-prompt attachments, raw successful assistant responses, HTTP status codes, and
-error response bodies. Attachment images are written under
+rebuilds. LM Studio-backed Infinity Parser2 calls additionally record local-only
+diagnostic details: prompt text, request parameters, sanitized payload JSON,
+filesystem paths for prompt attachments, raw successful assistant responses,
+HTTP status codes, and error response bodies. Attachment images are written under
 `.cache/trapo/llm-diagnostics/` when the rendered prompt image is not already
 available through a caller-provided path. Base64 image data URLs are not stored
 in DuckDB.
@@ -127,3 +127,14 @@ in DuckDB.
 These LLM diagnostics intentionally contain prompt and model output text. Keep
 them local, do not forward them to shared telemetry systems, and clear
 `.cache/trapo/llm-diagnostics/` when the prompt images are no longer needed.
+
+Ingest also persists planner/executor progress in `ingest_work_units`,
+`ingest_page_artifacts`, and `ingest_model_leases`. These tables drive
+`/api/diagnostics/progress`, `/api/diagnostics/analytics`, and
+`/api/diagnostics/models`. The web diagnostics area is split into Progress,
+Performance, Models, and Waterfall tabs so the same run can be inspected by
+document/page work, slow phases, model leases, or raw span timing. LM Studio
+model leases include requested and verified context lengths plus generation
+parameters such as `repeat_penalty`, so a low-context model load and the
+generation settings used by later chat calls are visible without reading raw
+logs.

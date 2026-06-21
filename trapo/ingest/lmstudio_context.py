@@ -11,6 +11,7 @@ from trapo.ingest.lmstudio_models import (
     DEFAULT_LMSTUDIO_BASE_URL,
     DEFAULT_LMSTUDIO_CONTEXT_TOKENS,
     DEFAULT_LMSTUDIO_MODEL,
+    DEFAULT_LMSTUDIO_REPEAT_PENALTY,
 )
 from trapo.ingest.lmstudio_native_models import (
     LmStudioNativeClient,
@@ -33,6 +34,7 @@ class LmStudioContextInfo:
     max_context_tokens: int | None = None
     loaded_context_tokens: int | None = None
     applied_context_tokens: int | None = None
+    requested_repeat_penalty: float = DEFAULT_LMSTUDIO_REPEAT_PENALTY
     load_attempted: bool = False
     load_status: str = "not_attempted"
     error: str | None = None
@@ -131,14 +133,40 @@ def ensure_lmstudio_max_context(  # noqa: PLR0911, PLR0913
         load_response = load_lmstudio_model_at_context(
             client, native_base_url, model, max_context
         )
-        applied_context = loaded_context_tokens(load_response) or max_context
+        applied_context = loaded_context_tokens(load_response)
+        verified_context = _verified_loaded_context(client, native_base_url, model)
+        if not _context_is_verified(verified_context, max_context):
+            unload_lmstudio_model(client, native_base_url, model, log)
+            load_response = load_lmstudio_model_at_context(
+                client, native_base_url, model, max_context
+            )
+            applied_context = loaded_context_tokens(load_response)
+            verified_context = _verified_loaded_context(client, native_base_url, model)
+        if not _context_is_verified(verified_context, max_context):
+            info = LmStudioContextInfo(
+                model=model,
+                base_url=base_url,
+                native_base_url=native_base_url,
+                max_context_tokens=max_context,
+                loaded_context_tokens=verified_context or loaded_context,
+                applied_context_tokens=applied_context,
+                load_attempted=True,
+                load_status="verification_failed",
+                error=(
+                    "LM Studio did not verify the requested max context: "
+                    f"model={model} requested={max_context} "
+                    f"verified={verified_context or 'unknown'}"
+                ),
+            )
+            _log(log, _summary(info))
+            return info
         info = LmStudioContextInfo(
             model=model,
             base_url=base_url,
             native_base_url=native_base_url,
             max_context_tokens=max_context,
             loaded_context_tokens=loaded_context,
-            applied_context_tokens=applied_context,
+            applied_context_tokens=verified_context or applied_context or max_context,
             load_attempted=True,
             load_status="loaded_max",
         )
@@ -175,10 +203,38 @@ def _summary(info: LmStudioContextInfo) -> str:
         f"max_context={info.max_context_tokens or 'unknown'}",
         f"loaded_context={info.loaded_context_tokens or 'unknown'}",
         f"applied_context={info.applied_context_tokens or 'unknown'}",
+        f"generation_repeat_penalty={info.requested_repeat_penalty}",
     ]
     if info.error:
         parts.append(f"error={info.error}")
     return " ".join(parts)
+
+
+def _verified_loaded_context(
+    client: LmStudioNativeClient,
+    native_base_url: str,
+    model: str,
+) -> int | None:
+    models_payload = read_lmstudio_models_payload(client, native_base_url)
+    model_info = model_from_lmstudio_list(models_payload, model)
+    candidates: list[int] = []
+    if model_info is not None:
+        candidate = loaded_context_tokens(model_info)
+        if candidate is not None:
+            candidates.append(candidate)
+    if not candidates:
+        try:
+            detail = read_lmstudio_model_detail(client, native_base_url, model)
+        except Exception:
+            detail = {}
+        candidate = loaded_context_tokens(detail)
+        if candidate is not None:
+            candidates.append(candidate)
+    return max(candidates) if candidates else None
+
+
+def _context_is_verified(loaded_context: int | None, expected_context: int) -> bool:
+    return loaded_context is not None and loaded_context >= expected_context
 
 
 def _log(log: Callable[[str], None] | None, message: str) -> None:

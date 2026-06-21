@@ -23,6 +23,9 @@ SMALL_CONTEXT = 4096
 LMSTUDIO_DEFAULT_CONTEXT = 2048
 OLMOCR_CONTEXT_TOKENS = 128_000
 CONTEXT_RESERVE_TOKENS = 1024
+EXPECTED_LOAD_RETRY_CALLS = 2
+INFINITY_LMSTUDIO_MODEL = "infinity-parser2-flash"
+GEMMA_MODEL = "google/gemma-4-26b-a4b-qat"
 
 
 def test_ensure_lmstudio_max_context_loads_advertised_max_when_not_loaded() -> None:
@@ -30,7 +33,7 @@ def test_ensure_lmstudio_max_context_loads_advertised_max_when_not_loaded() -> N
         model_info={
             "models": [
                 {
-                    "key": "google/gemma-4-26b-a4b-qat",
+                    "key": INFINITY_LMSTUDIO_MODEL,
                     "max_context_length": CONTEXT_TOKENS,
                     "loaded_instances": [],
                 }
@@ -51,7 +54,7 @@ def test_ensure_lmstudio_max_context_loads_advertised_max_when_not_loaded() -> N
     assert info.load_status == "loaded_max"
     assert client.post_payloads == [
         {
-            "model": "google/gemma-4-26b-a4b-qat",
+            "model": INFINITY_LMSTUDIO_MODEL,
             "context_length": CONTEXT_TOKENS,
             "echo_load_config": True,
         }
@@ -63,11 +66,11 @@ def test_ensure_lmstudio_max_context_uses_supported_model_floor() -> None:
         model_info={
             "models": [
                 {
-                    "key": "google/gemma-4-26b-a4b-qat",
+                    "key": GEMMA_MODEL,
                     "max_context_length": SMALL_CONTEXT,
                     "loaded_instances": [
                         {
-                            "id": "gemma-low-context",
+                            "id": "supported-low-context",
                             "load_config": {"context_length": SMALL_CONTEXT},
                         }
                     ],
@@ -80,15 +83,15 @@ def test_ensure_lmstudio_max_context_uses_supported_model_floor() -> None:
         },
     )
 
-    info = ensure_lmstudio_max_context(http_client=client)
+    info = ensure_lmstudio_max_context(model=GEMMA_MODEL, http_client=client)
 
     assert info.max_context_tokens == CONTEXT_TOKENS
     assert info.loaded_context_tokens == SMALL_CONTEXT
     assert info.applied_context_tokens == CONTEXT_TOKENS
-    assert client.unload_payloads == [{"instance_id": "gemma-low-context"}]
+    assert client.unload_payloads == [{"instance_id": "supported-low-context"}]
     assert client.post_payloads == [
         {
-            "model": "google/gemma-4-26b-a4b-qat",
+            "model": GEMMA_MODEL,
             "context_length": CONTEXT_TOKENS,
             "echo_load_config": True,
         }
@@ -102,11 +105,11 @@ def test_ensure_lmstudio_max_context_forces_known_max_when_lmstudio_reports_defa
         model_info={
             "models": [
                 {
-                    "key": "google/gemma-4-26b-a4b-qat",
+                    "key": INFINITY_LMSTUDIO_MODEL,
                     "max_context_length": LMSTUDIO_DEFAULT_CONTEXT,
                     "loaded_instances": [
                         {
-                            "id": "gemma-default-context",
+                            "id": "infinity-default-context",
                             "load_config": {"context_length": LMSTUDIO_DEFAULT_CONTEXT},
                         }
                     ],
@@ -124,14 +127,42 @@ def test_ensure_lmstudio_max_context_forces_known_max_when_lmstudio_reports_defa
     assert info.max_context_tokens == CONTEXT_TOKENS
     assert info.loaded_context_tokens == LMSTUDIO_DEFAULT_CONTEXT
     assert info.applied_context_tokens == CONTEXT_TOKENS
-    assert client.unload_payloads == [{"instance_id": "gemma-default-context"}]
+    assert client.unload_payloads == [{"instance_id": "infinity-default-context"}]
     assert client.post_payloads == [
         {
-            "model": "google/gemma-4-26b-a4b-qat",
+            "model": INFINITY_LMSTUDIO_MODEL,
             "context_length": CONTEXT_TOKENS,
             "echo_load_config": True,
         }
     ]
+
+
+def test_ensure_lmstudio_max_context_fails_when_loaded_context_stays_low() -> None:
+    client = _FakeContextClient(
+        model_info={
+            "models": [
+                {
+                    "key": INFINITY_LMSTUDIO_MODEL,
+                    "max_context_length": LMSTUDIO_DEFAULT_CONTEXT,
+                    "loaded_instances": [
+                        {
+                            "id": "infinity-default-context",
+                            "load_config": {"context_length": LMSTUDIO_DEFAULT_CONTEXT},
+                        }
+                    ],
+                }
+            ]
+        },
+        load_response={"load_config": {"context_length": CONTEXT_TOKENS}},
+    )
+    client.loaded_context_override = LMSTUDIO_DEFAULT_CONTEXT
+
+    info = ensure_lmstudio_max_context(http_client=client)
+
+    assert info.load_status == "verification_failed"
+    assert info.max_context_tokens == CONTEXT_TOKENS
+    assert info.loaded_context_tokens == LMSTUDIO_DEFAULT_CONTEXT
+    assert len(client.post_payloads) == EXPECTED_LOAD_RETRY_CALLS
 
 
 def test_ensure_lmstudio_max_context_forces_infinity_parser_known_max() -> None:
@@ -139,7 +170,7 @@ def test_ensure_lmstudio_max_context_forces_infinity_parser_known_max() -> None:
         model_info={
             "models": [
                 {
-                    "key": "infinity-parser2-flash",
+                    "key": INFINITY_LMSTUDIO_MODEL,
                     "loaded_instances": [],
                 }
             ]
@@ -151,7 +182,7 @@ def test_ensure_lmstudio_max_context_forces_infinity_parser_known_max() -> None:
     )
 
     info = ensure_lmstudio_max_context(
-        model="infinity-parser2-flash",
+        model=INFINITY_LMSTUDIO_MODEL,
         http_client=client,
     )
 
@@ -159,7 +190,7 @@ def test_ensure_lmstudio_max_context_forces_infinity_parser_known_max() -> None:
     assert info.applied_context_tokens == CONTEXT_TOKENS
     assert client.post_payloads == [
         {
-            "model": "infinity-parser2-flash",
+            "model": INFINITY_LMSTUDIO_MODEL,
             "context_length": CONTEXT_TOKENS,
             "echo_load_config": True,
         }
@@ -201,10 +232,15 @@ def test_ensure_lmstudio_max_context_does_not_reload_when_already_at_max() -> No
         model_info={
             "models": [
                 {
-                    "key": "google/gemma-4-26b-a4b-qat",
+                    "key": INFINITY_LMSTUDIO_MODEL,
                     "max_context_length": CONTEXT_TOKENS,
                     "loaded_instances": [
-                        {"load_config": {"context_length": CONTEXT_TOKENS}}
+                        {
+                            "load_config": {
+                                "context_length": CONTEXT_TOKENS,
+                                "repeat_penalty": 1.2,
+                            }
+                        }
                     ],
                 }
             ]
@@ -236,10 +272,15 @@ def test_ensure_lmstudio_max_context_unloads_other_active_models() -> None:
                     ],
                 },
                 {
-                    "key": "google/gemma-4-26b-a4b-qat",
+                    "key": INFINITY_LMSTUDIO_MODEL,
                     "max_context_length": CONTEXT_TOKENS,
                     "loaded_instances": [
-                        {"load_config": {"context_length": CONTEXT_TOKENS}}
+                        {
+                            "load_config": {
+                                "context_length": CONTEXT_TOKENS,
+                                "repeat_penalty": 1.2,
+                            }
+                        }
                     ],
                 },
             ]
@@ -263,10 +304,15 @@ def test_ensure_lmstudio_max_context_unload_falls_back_to_model_key() -> None:
                     "loaded_instances": [{"load_config": {"context_length": 4096}}],
                 },
                 {
-                    "key": "google/gemma-4-26b-a4b-qat",
+                    "key": INFINITY_LMSTUDIO_MODEL,
                     "max_context_length": CONTEXT_TOKENS,
                     "loaded_instances": [
-                        {"load_config": {"context_length": CONTEXT_TOKENS}}
+                        {
+                            "load_config": {
+                                "context_length": CONTEXT_TOKENS,
+                                "repeat_penalty": 1.2,
+                            }
+                        }
                     ],
                 },
             ]
@@ -286,11 +332,11 @@ def test_unload_lmstudio_model_unloads_target_instances() -> None:
         model_info={
             "models": [
                 {
-                    "key": "google/gemma-4-26b-a4b-qat",
-                    "loaded_instances": [{"id": "gemma-instance"}],
+                    "key": GEMMA_MODEL,
+                    "loaded_instances": [{"id": "supported-instance"}],
                 },
                 {
-                    "key": "infinity-parser2-flash",
+                    "key": INFINITY_LMSTUDIO_MODEL,
                     "loaded_instances": [{"id": "infinity-instance"}],
                 },
             ]
@@ -301,10 +347,10 @@ def test_unload_lmstudio_model_unloads_target_instances() -> None:
     unload_lmstudio_model(
         client,
         "http://localhost:1234",
-        "google/gemma-4-26b-a4b-qat",
+        GEMMA_MODEL,
     )
 
-    assert client.unload_payloads == [{"instance_id": "gemma-instance"}]
+    assert client.unload_payloads == [{"instance_id": "supported-instance"}]
 
 
 def test_lmstudio_native_base_url_strips_openai_suffix() -> None:
@@ -390,12 +436,33 @@ class _FakeContextClient:
     ) -> None:
         self.model_info = model_info
         self.load_response = load_response
+        self.loaded_model: str | None = None
+        self.loaded_context: int | None = None
+        self.loaded_context_override: int | None = None
         self.post_payloads: list[dict[str, Any]] = []
         self.unload_payloads: list[dict[str, Any]] = []
 
     def get(self, url: str, *, headers: Mapping[str, str]) -> _FakeResponse:
         assert headers["Authorization"] == "Bearer lm-studio"
         assert url.endswith("/api/v1/models")
+        if self.loaded_model is not None and self.loaded_context is not None:
+            return _FakeResponse(
+                {
+                    "models": [
+                        {
+                            "key": self.loaded_model,
+                            "loaded_instances": [
+                                {
+                                    "id": f"{self.loaded_model}-instance",
+                                    "load_config": {
+                                        "context_length": self.loaded_context,
+                                    },
+                                }
+                            ],
+                        }
+                    ]
+                }
+            )
         return _FakeResponse(self.model_info)
 
     def post(
@@ -408,9 +475,16 @@ class _FakeContextClient:
         assert headers["Authorization"] == "Bearer lm-studio"
         if url.endswith("/api/v1/models/unload"):
             self.unload_payloads.append(dict(json))
+            self.loaded_model = None
+            self.loaded_context = None
             return _FakeResponse({"status": "unloaded"})
         assert url.endswith("/api/v1/models/load")
-        self.post_payloads.append(dict(json))
+        payload = dict(json)
+        self.post_payloads.append(payload)
+        self.loaded_model = str(payload["model"])
+        self.loaded_context = self.loaded_context_override or int(
+            payload["context_length"]
+        )
         return _FakeResponse(self.load_response)
 
     def close(self) -> None:

@@ -1,7 +1,7 @@
 # DuckDB Schema
 
-Trapo stores local Docling/MinerU/LM Studio/Infinity Parser2 ingest output, deterministic fused
-annotation output, and search indexes in DuckDB.
+Trapo stores local Docling, MinerU, and Infinity Parser2 ingest output plus
+search indexes in DuckDB.
 The schema is intentionally small: raw OCR outputs, deterministic chunks, page
 regions with bounding boxes, cache-backed normalized preview images,
 provider-aware annotation settings, per-page Markdown equivalents, Markdown
@@ -86,7 +86,7 @@ Provider-aware raw OCR/annotation output linked to a file hash.
 | Column | Type | Notes |
 | --- | --- | --- |
 | `file_hash` | TEXT | Part of primary key |
-| `annotation_engine` | TEXT | Part of primary key; `docling`, `mineru`, cache-backed normalized engines `docling_normalized` and `mineru_normalized`, `lmstudio`, `infinity`, LM Studio prompt-profile engines such as `lmstudio_strict`, `fusion`, or profile-specific fusion engines such as `fusion_recall` |
+| `annotation_engine` | TEXT | Part of primary key; active engines are `docling`, `mineru`, `infinity`, and cache-backed normalized engines `docling_normalized` and `mineru_normalized` |
 | `ingest_run_id` | BIGINT | |
 | `text` | TEXT | Markdown/text export when available |
 | `output_json` | JSON | Full provider output retained for later reprocessing |
@@ -113,9 +113,8 @@ fallback). FTS is built over `text`.
 ### `document_regions`
 
 Page regions with bounding boxes derived from Docling provenance, MinerU content
-outputs, cache-backed normalized Docling/MinerU page-image outputs, LM Studio,
-Infinity Parser2
-page-level vision outputs, and deterministic fused boxes.
+outputs, cache-backed normalized Docling/MinerU page-image outputs, and
+Infinity Parser2 page-level outputs.
 Used to draw overlays in PDF and supported image previews, and to anchor word
 terms.
 
@@ -123,7 +122,7 @@ terms.
 | --- | --- | --- |
 | `region_id` | TEXT | Primary key (hash of file + bbox) |
 | `file_hash` | TEXT | |
-| `annotation_engine` | TEXT | `docling`, `mineru`, `docling_normalized`, `mineru_normalized`, `lmstudio`, `infinity`, LM Studio prompt-profile engines such as `lmstudio_recall`, `fusion`, or profile-specific fusion engines such as `fusion_recall` |
+| `annotation_engine` | TEXT | Active engines are `docling`, `mineru`, `infinity`, `docling_normalized`, and `mineru_normalized`; legacy engine values are ignored by active APIs |
 | `annotation_provider` / `annotation_model` | TEXT | Provider identity |
 | `chunk_id` / `chunk_index` | BIGINT / INTEGER | Linked chunk, if any |
 | `page_no` | INTEGER | |
@@ -166,7 +165,7 @@ Pipeline details: [page-markdown-pipeline.md](page-markdown-pipeline.md)
 | --- | --- | --- |
 | `file_hash` | TEXT | Part of primary key |
 | `page_no` | INTEGER | Part of primary key |
-| `markdown_engine` | TEXT | Part of primary key; provider-specific engines such as `lmstudio_markdown`, `infinity_markdown`, `markitdown`, or `markitdown_cu` |
+| `markdown_engine` | TEXT | Part of primary key; provider-specific engines such as `infinity_markdown`, `markitdown`, or `markitdown_cu` |
 | `markdown_provider` / `markdown_model` | TEXT | Local provider/model identity |
 | `markdown_text` | TEXT | Faithful Markdown for the visible page |
 | `page_width` / `page_height` | DOUBLE | Display page dimensions used for the prompt image |
@@ -187,7 +186,7 @@ all page rows.
 | Column | Type | Notes |
 | --- | --- | --- |
 | `file_hash` | TEXT | Part of primary key |
-| `markdown_engine` | TEXT | Part of primary key; `lmstudio_markdown`, `infinity_markdown`, `markitdown`, or `markitdown_cu` |
+| `markdown_engine` | TEXT | Part of primary key; `infinity_markdown`, `markitdown`, or `markitdown_cu` |
 | `ingest_run_id` | BIGINT | Ingest run that most recently attempted the generator |
 | `markdown_provider` / `markdown_model` | TEXT | Provider/model identity |
 | `status` | TEXT | `ok` or `error` |
@@ -219,10 +218,11 @@ DuckDB.
 ### `ingest_diagnostic_events`
 
 Log and exception events associated with diagnostic spans.
-LM Studio chat-completion calls also write `llm.request`, `llm.response`, and
-`llm.error` events. These events keep prompt text, model parameters, sanitized
-payload JSON, filesystem prompt-attachment paths, raw successful responses, and
-HTTP error bodies in `attributes_json` for the diagnostics details pane.
+LM Studio-backed Infinity Parser2 chat-completion calls also write
+`llm.request`, `llm.response`, and `llm.error` events. These events keep prompt
+text, model parameters, sanitized payload JSON, filesystem prompt-attachment
+paths, raw successful responses, and HTTP error bodies in `attributes_json` for
+the diagnostics details pane.
 Image data URLs are replaced by attachment metadata so the database does not
 store base64 image payloads.
 
@@ -284,15 +284,15 @@ long cold document does not require rendering every page before the first view.
 Optional display rotation overrides for image preview pages. These are applied
 after EXIF orientation, in clockwise degrees, and affect page dimensions,
 preview pixels, and overlay normalization. This table is the common storage
-surface for manual corrections, LM Studio orientation preflight decisions, and
-Docling layout heuristic decisions for no-EXIF sideways images.
+surface for manual corrections and Docling layout heuristic decisions for
+no-EXIF sideways images.
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | `file_hash` | TEXT | Part of primary key |
 | `page_no` | INTEGER | Part of primary key |
 | `clockwise_degrees` | INTEGER | `0`, `90`, `180`, or `270` |
-| `source` | TEXT | `manual`, `lmstudio`, or another detector id |
+| `source` | TEXT | `manual`, `docling_layout_heuristic`, or another detector id |
 | `confidence` | DOUBLE | Optional detector confidence |
 | `metadata_json` | JSON | Detector/agent metadata |
 | `updated_at` | TIMESTAMP | |
@@ -322,6 +322,65 @@ DB-backed overlay colors and stroke/fill settings by engine and region kind.
 | `stroke_width` | DOUBLE | Overlay border width |
 | `updated_at` | TIMESTAMP | |
 
+### `ingest_work_units`
+
+Per-run planner/executor state. Each row represents one planned unit such as a
+file-level annotation engine, a Markdown generator, or an artifact render. The
+final OCR/Markdown tables remain the canonical result store; this table is for
+progress, retries, timings, and diagnostics.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `work_unit_id` | BIGINT | Primary key (`ingest_work_unit_id_seq`) |
+| `ingest_run_id` / `work_key` | BIGINT / TEXT | Unique planned unit identity |
+| `file_hash` / `page_no` | TEXT / INTEGER | Optional document/page scope |
+| `phase` | TEXT | `orientation`, `artifact`, `annotation`, or `markdown` |
+| `engine` / `provider` / `model` | TEXT | Executor identity |
+| `profile` | TEXT | Optional executor profile |
+| `execution_key` | TEXT | Sort key used for dependency/model batching |
+| `artifact_variant` | TEXT | Optional required artifact variant |
+| `status` | TEXT | `planned`, `running`, `ok`, `error`, or `skipped` |
+| `attempt_count` | INTEGER | Number of executor attempts |
+| `started_at` / `finished_at` / `duration_ms` | TIMESTAMP / TIMESTAMP / DOUBLE | Timing |
+| `result_json` / `metadata_json` | JSON | Small result and planner metadata |
+| `error` | TEXT | Failure detail |
+
+### `ingest_page_artifacts`
+
+Per-run page artifact index used by diagnostics and future resumable execution.
+Public preview variants still live in `document_preview_images`; this table
+references those cached paths and any model/Markdown prompt artifacts needed by
+the planner.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `ingest_run_id` / `file_hash` / `page_no` / `variant` | BIGINT / TEXT / INTEGER / TEXT | Primary key |
+| `page_width` / `page_height` | DOUBLE | Display page dimensions |
+| `render_width` / `render_height` | INTEGER | Artifact pixel dimensions |
+| `mime_type` / `image_sha256` | TEXT | Encoded artifact identity |
+| `cache_path` | TEXT | Local artifact path when available |
+| `source_variant` | TEXT | Related preview variant, if any |
+| `metadata_json` | JSON | Render settings and cache metadata |
+| `created_at` / `updated_at` | TIMESTAMP | |
+
+### `ingest_model_leases`
+
+One row per model/dependency activation window. LM Studio leases record the
+requested and verified context lengths plus requested generation parameters such
+as `repeat_penalty`, so low-context loads and chat-generation settings are
+visible in the diagnostics UI.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `lease_id` | BIGINT | Primary key (`ingest_model_lease_id_seq`) |
+| `ingest_run_id` / `execution_key` | BIGINT / TEXT | Batch scope |
+| `provider` / `model` | TEXT | Activated dependency or model |
+| `requested_context_tokens` / `verified_context_tokens` | INTEGER | LM Studio context data |
+| `status` | TEXT | `running`, `ok`, or `error` |
+| `started_at` / `finished_at` / `duration_ms` | TIMESTAMP / TIMESTAMP / DOUBLE | Timing |
+| `error` | TEXT | Failure detail |
+| `metadata_json` | JSON | Load status and batch metadata |
+
 ## Search indexes
 
 - A DuckDB FTS index over `document_chunks.text` is created on demand
@@ -341,4 +400,9 @@ DB-backed overlay colors and stroke/fill settings by engine and region kind.
   `document_markdown_generators(file_hash)`,
   `document_page_markdown_regions(file_hash, region_id)`,
   `document_preview_images(file_hash)`,
+  `ingest_work_units(ingest_run_id, status)`,
+  `ingest_work_units(ingest_run_id, file_hash, page_no)`,
+  `ingest_work_units(ingest_run_id, execution_key, phase)`,
+  `ingest_page_artifacts(ingest_run_id, file_hash, page_no)`,
+  `ingest_model_leases(ingest_run_id, execution_key)`,
   `document_terms(file_hash, page_no, region_id)`, and `document_terms(chunk_id)`.

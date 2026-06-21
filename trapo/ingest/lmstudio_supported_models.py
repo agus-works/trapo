@@ -3,18 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-SUPPORTED_LMSTUDIO_ANNOTATION_ENGINES = (
-    "lmstudio",
-    "lmstudio_strict",
-    "lmstudio_recall",
-)
-SUPPORTED_LMSTUDIO_MARKDOWN_ENGINES = (
-    "lmstudio_markdown",
-    "markitdown:lmstudio_ocr",
-    "infinity_markdown:lmstudio",
-)
-
-
 @dataclass(frozen=True)
 class LmStudioSupportedModel:
     model: str

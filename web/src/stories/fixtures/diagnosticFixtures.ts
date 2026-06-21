@@ -241,7 +241,7 @@ function span({
 }: SpanFixture): DiagnosticSpanRecord {
   const startedAt = new Date(Date.UTC(2026, 0, 5, 10, 0, 0) + offsetMs);
   return {
-    annotation_engine: category === 'markdown' ? 'lmstudio_markdown' : null,
+    annotation_engine: category === 'markdown' ? 'infinity_markdown' : null,
     attributes: { 'file.hash': anonymizedFileHash, 'pipeline.step': step },
     category,
     duration_ms: durationMs,

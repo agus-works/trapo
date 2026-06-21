@@ -6,7 +6,6 @@ export type DocumentViewMode = 'preview' | 'markdown' | 'split';
 
 export type MarkdownEngine =
   | 'best_available_markdown'
-  | 'lmstudio_markdown'
   | 'infinity_markdown'
   | 'markitdown'
   | 'markitdown_cu';

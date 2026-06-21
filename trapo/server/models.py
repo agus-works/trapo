@@ -91,10 +91,8 @@ class DocumentSummary(BaseModel):
     docling_error: str | None = None
     mineru_status: str | None = None
     mineru_error: str | None = None
-    lmstudio_status: str | None = None
-    lmstudio_error: str | None = None
-    fusion_status: str | None = None
-    fusion_error: str | None = None
+    infinity_status: str | None = None
+    infinity_error: str | None = None
     chunk_count: int = 0
     region_count: int = 0
 

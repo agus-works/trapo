@@ -2,27 +2,36 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from trapo.assets import PREVIEW_EXTENSIONS
 from trapo.annotation.docling.regions import rebuild_document_regions
-from trapo.annotation.fusion import FUSION_MODEL, FUSION_PROVIDER
 from trapo.config import RuntimeConfig
 from trapo.db import DuckConnection, next_table_id, table_exists
 from trapo.diagnostics import activate_diagnostic_run, deactivate_diagnostic_run
+from trapo.document_markdown import (
+    INFINITY_MARKDOWN_ENGINE,
+    MARKITDOWN_CU_MARKDOWN_ENGINE,
+    MARKITDOWN_MARKDOWN_ENGINE,
+)
 from trapo.hash import sha256_file
 from trapo.ingest.chunking import chunk_docling_document, chunk_text
 from trapo.ingest.docling_reader import DoclingReaderOptions, DoclingReadResult
 from trapo.ingest.engine_steps import (
-    lmstudio_profile_engines,
-    pending_fusion_profiles,
-    process_fusion,
     process_infinity,
-    process_lmstudio_profiles,
     process_mineru,
 )
 from trapo.ingest.infinity_models import INFINITY_ENGINE
+from trapo.ingest.infinity_models import InfinityOptions
+from trapo.ingest.lmstudio_context import LmStudioContextInfo
+from trapo.ingest.lmstudio_lifecycle import lmstudio_model_lease
+from trapo.ingest.lmstudio_models import DEFAULT_LMSTUDIO_REPEAT_PENALTY
+from trapo.ingest.lmstudio_supported_models import supported_lmstudio_model_max_context
+from trapo.ingest.markdown_engines import requested_markdown_engines
+from trapo.ingest.model_leases import finish_model_lease, start_model_lease
 from trapo.ingest.normalized_pipelines import (
     DOCLING_NORMALIZED_ENGINE,
     MINERU_NORMALIZED_ENGINE,
@@ -36,8 +45,6 @@ from trapo.ingest.ocr_storage import (
 )
 from trapo.ingest.orientation_steps import (
     process_docling_orientation_heuristic,
-    process_lmstudio_orientation,
-    should_run_lmstudio_orientation,
 )
 from trapo.ingest.options import IngestOptions, IngestSummary
 from trapo.ingest.page_markdown_step import (
@@ -57,6 +64,33 @@ from trapo.preview_cache import (
     build_document_preview_cache,
     read_document_preview_images,
 )
+from trapo.ingest.work_planner import (
+    PageArtifact,
+    WorkUnit,
+    fail_work_unit,
+    finish_work_unit,
+    start_work_unit,
+    upsert_page_artifact,
+    upsert_work_unit,
+)
+
+
+@dataclass
+class FileExecutionPlan:
+    path: Path
+    file_hash: str
+    index: int
+    file_count: int
+    engines: list[str]
+    pending_engines: list[str]
+    markdown_pending: bool
+    preview_cache_pending: bool
+    chunk_count: int = 0
+    region_count: int = 0
+    engine_errors: int = 0
+    preview_image_count: int = 0
+    processed: bool = False
+    skipped: bool = False
 
 
 def discover_files(directory: Path) -> list[Path]:
@@ -78,8 +112,6 @@ def ingest_directory(  # noqa: PLR0912
         raise ValueError(
             f"Source directory does not exist or is not a directory: {directory}"
         )
-    if "lmstudio" in _requested_engines(options.annotation_engines):
-        lmstudio_profile_engines(options)
 
     run_id = next_table_id(
         connection,
@@ -101,34 +133,79 @@ def ingest_directory(  # noqa: PLR0912
     files = discover_files(directory)
     log(f"Discovered {len(files)} file(s) under {directory}")
 
-    files_seen = 0
-    files_processed = 0
-    files_skipped = 0
-    chunks_created = 0
-    errors = 0
+    try:
+        plans, files_skipped, plan_errors = _plan_ingest_files(
+            connection, files, run_id, config, options, log
+        )
+        errors = plan_errors
+        errors += _run_local_file_steps(connection, plans, run_id, config, options, log)
+        errors += _run_infinity_group(connection, plans, run_id, options, log)
+        errors += _run_markdown_groups(connection, plans, run_id, options, log)
 
-    for path in files:
-        files_seen += 1
+        files_processed = sum(1 for plan in plans if plan.processed)
+        chunks_created = sum(plan.chunk_count for plan in plans)
+        errors += sum(plan.engine_errors for plan in plans)
+
+        status = "ok" if errors == 0 else "completed_with_errors"
+        connection.execute(
+            """
+            UPDATE ingest_runs
+            SET finished_at = current_timestamp, status = ?, error = ?
+            WHERE ingest_run_id = ?
+            """,
+            [status, f"{errors} OCR engine run(s) failed" if errors else None, run_id],
+        )
+        return IngestSummary(
+            files_seen=len(files),
+            files_processed=files_processed,
+            files_skipped=files_skipped,
+            chunks_created=chunks_created,
+            errors=errors,
+        )
+    except Exception as exc:
+        connection.execute(
+            """
+            UPDATE ingest_runs
+            SET finished_at = current_timestamp, status = 'error', error = ?
+            WHERE ingest_run_id = ?
+            """,
+            [_error_detail(exc), run_id],
+        )
+        raise
+    finally:
+        deactivate_diagnostic_run()
+
+
+def _plan_ingest_files(  # noqa: PLR0913
+    connection: DuckConnection,
+    files: list[Path],
+    run_id: int,
+    config: RuntimeConfig,
+    options: IngestOptions,
+    log: Callable[[str], None],
+) -> tuple[list[FileExecutionPlan], int, int]:
+    del config
+    plans: list[FileExecutionPlan] = []
+    files_skipped = 0
+    errors = 0
+    for index, path in enumerate(files, start=1):
         file_hash = str(path)
         with traced_span(
-            "trapo.ingest.file",
+            "trapo.ingest.plan_file",
             attributes={
                 "file.name": path.name,
                 "file.extension": path.suffix.lower(),
-                "ingest.file_index": files_seen,
+                "ingest.file_index": index,
                 "ingest.file_count": len(files),
             },
         ) as file_span:
             try:
-                log(f"[{files_seen}/{len(files)}] Hashing {path}")
+                log(f"[{index}/{len(files)}] Hashing {path}")
                 file_hash = sha256_file(path)
                 stat = path.stat()
                 span_set_attributes(
                     file_span,
-                    {
-                        "file.hash": file_hash,
-                        "file.size_bytes": stat.st_size,
-                    },
+                    {"file.hash": file_hash, "file.size_bytes": stat.st_size},
                 )
                 _upsert_file(connection, path, file_hash, stat.st_size, stat.st_mtime)
                 engines = _supported_engines(path, options)
@@ -139,10 +216,7 @@ def ingest_directory(  # noqa: PLR0912
                     continue
                 preview_cache_pending = (
                     options.reprocess
-                    or not _preview_cache_complete(
-                        connection,
-                        file_hash,
-                    )
+                    or not _preview_cache_complete(connection, file_hash)
                 )
                 pending_engines = [
                     engine
@@ -150,25 +224,16 @@ def ingest_directory(  # noqa: PLR0912
                     if options.reprocess
                     or not _engine_complete(connection, file_hash, engine, options)
                 ]
-                requested_fusion_outputs = pending_fusion_profiles(
-                    connection,
-                    file_hash,
-                    pending_engines=pending_engines,
-                    options=options,
-                )
-                fusion_pending = bool(requested_fusion_outputs)
                 markdown_pending = pending_page_markdown(
                     connection,
                     path,
                     file_hash,
                     pending_engines=pending_engines,
-                    fusion_pending=fusion_pending,
                     options=options,
                 )
                 if (
                     not preview_cache_pending
                     and not pending_engines
-                    and not fusion_pending
                     and not markdown_pending
                 ):
                     log(f"Skipping unchanged OCR outputs: {path}")
@@ -181,47 +246,114 @@ def ingest_directory(  # noqa: PLR0912
                         },
                     )
                     continue
+                plan = FileExecutionPlan(
+                    path=path,
+                    file_hash=file_hash,
+                    index=index,
+                    file_count=len(files),
+                    engines=engines,
+                    pending_engines=pending_engines,
+                    markdown_pending=markdown_pending,
+                    preview_cache_pending=preview_cache_pending,
+                )
+                _upsert_plan_work_units(connection, run_id, plan, options)
+                plans.append(plan)
+                span_set_attributes(
+                    file_span,
+                    {
+                        "ingest.status": "planned",
+                        "annotation.engines": ",".join(engines),
+                        "annotation.pending_engines": ",".join(pending_engines),
+                        "markdown.pending": markdown_pending,
+                    },
+                )
+            except Exception as exc:
+                mark_span_error(file_span, exc)
+                span_set_attributes(
+                    file_span,
+                    {"file.hash": file_hash, "ingest.status": "error"},
+                )
+                log(f"Error while planning {path}: {exc}")
+                errors += 1
+                record_docling_error(connection, file_hash, run_id, exc)
+    return plans, files_skipped, errors
 
-                file_chunk_count = 0
-                file_region_count = 0
-                file_engine_errors = 0
-                file_preview_image_count = 0
-                if should_run_lmstudio_orientation(path, pending_engines, options):
-                    try:
-                        process_lmstudio_orientation(
-                            connection,
-                            path,
-                            file_hash,
-                            options,
-                            log,
-                        )
-                    except Exception as exc:
-                        log(f"LM Studio orientation detection failed for {path}: {exc}")
-                if "docling" in pending_engines:
-                    try:
-                        docling_chunks, docling_regions = _process_docling(
-                            connection,
-                            path,
-                            file_hash,
-                            run_id,
-                            config,
-                            options,
-                            log,
-                        )
-                        file_chunk_count += docling_chunks
-                        file_region_count += docling_regions
-                    except Exception as exc:
-                        file_engine_errors += 1
-                        record_docling_error(connection, file_hash, run_id, exc)
-                        log(f"Docling failed for {path}: {exc}")
+
+def _upsert_plan_work_units(
+    connection: DuckConnection,
+    run_id: int,
+    plan: FileExecutionPlan,
+    options: IngestOptions,
+) -> None:
+    if plan.preview_cache_pending:
+        _upsert_file_work_unit(
+            connection,
+            run_id,
+            plan,
+            phase="artifact",
+            engine="preview_cache",
+            provider="local-renderer",
+            model="trapo-preview-cache",
+            execution_key="local:preview_cache",
+        )
+    for engine in plan.pending_engines:
+        provider, model, execution_key = _engine_identity(engine, options)
+        _upsert_file_work_unit(
+            connection,
+            run_id,
+            plan,
+            phase="annotation",
+            engine=engine,
+            provider=provider,
+            model=model,
+            execution_key=execution_key,
+        )
+    if plan.markdown_pending:
+        for markdown_engine in requested_markdown_engines(options):
+            provider, model, execution_key = _markdown_identity(
+                markdown_engine, options
+            )
+            _upsert_file_work_unit(
+                connection,
+                run_id,
+                plan,
+                phase="markdown",
+                engine=markdown_engine,
+                provider=provider,
+                model=model,
+                execution_key=execution_key,
+            )
+
+
+def _run_local_file_steps(  # noqa: PLR0912, PLR0913
+    connection: DuckConnection,
+    plans: list[FileExecutionPlan],
+    run_id: int,
+    config: RuntimeConfig,
+    options: IngestOptions,
+    log: Callable[[str], None],
+) -> int:
+    for plan in plans:
+        with traced_span(
+            "trapo.ingest.file_local_steps",
+            attributes={
+                "file.hash": plan.file_hash,
+                "file.name": plan.path.name,
+                "ingest.file_index": plan.index,
+                "ingest.file_count": plan.file_count,
+            },
+        ) as file_span:
+            if "docling" in plan.pending_engines:
+                _run_docling_step(connection, plan, run_id, config, options, log)
+            try:
                 with traced_span(
                     "trapo.ingest.docling_orientation_heuristic",
-                    attributes={"file.hash": file_hash},
+                    attributes={"file.hash": plan.file_hash},
                 ) as orientation_span:
                     heuristic_overrides = process_docling_orientation_heuristic(
                         connection,
-                        path,
-                        file_hash,
+                        plan.path,
+                        plan.file_hash,
                         options,
                         log,
                     )
@@ -229,229 +361,653 @@ def ingest_directory(  # noqa: PLR0912
                         orientation_span,
                         {"orientation.override_count": heuristic_overrides},
                     )
-                if preview_cache_pending:
-                    try:
-                        with traced_span(
-                            "trapo.ingest.preview_cache",
-                            attributes={"file.hash": file_hash},
-                        ) as preview_span:
-                            file_preview_image_count = _process_preview_cache(
-                                connection,
-                                path,
-                                file_hash,
-                                log,
-                            )
-                            span_set_attributes(
-                                preview_span,
-                                {"preview.image_count": file_preview_image_count},
-                            )
-                    except Exception as exc:
-                        file_engine_errors += 1
-                        log(f"Preview cache rendering failed for {path}: {exc}")
-                if DOCLING_NORMALIZED_ENGINE in pending_engines:
-                    try:
-                        docling_normalized_regions = process_docling_normalized(
-                            connection,
-                            path,
-                            file_hash,
-                            run_id,
-                            options,
-                            log,
-                        )
-                        file_region_count += docling_normalized_regions
-                    except Exception as exc:
-                        file_engine_errors += 1
-                        record_ocr_error(
-                            connection,
-                            file_hash,
-                            run_id,
-                            annotation_engine=DOCLING_NORMALIZED_ENGINE,
-                            reader_provider="local-docling",
-                            reader_model="docling-normalized-jpg",
-                            exc=exc,
-                        )
-                        log(f"Normalized Docling failed for {path}: {exc}")
-                if "mineru" in pending_engines:
-                    try:
-                        mineru_regions = process_mineru(
-                            connection,
-                            path,
-                            file_hash,
-                            run_id,
-                            options,
-                            log,
-                        )
-                        file_region_count += mineru_regions
-                    except Exception as exc:
-                        file_engine_errors += 1
-                        record_ocr_error(
-                            connection,
-                            file_hash,
-                            run_id,
-                            annotation_engine="mineru",
-                            reader_provider="local-mineru",
-                            reader_model=f"mineru-{options.mineru_backend}",
-                            exc=exc,
-                        )
-                        log(f"MinerU failed for {path}: {exc}")
-                if INFINITY_ENGINE in pending_engines:
-                    try:
-                        infinity_regions = process_infinity(
-                            connection,
-                            path,
-                            file_hash,
-                            run_id,
-                            options,
-                            log,
-                        )
-                        file_region_count += infinity_regions
-                    except Exception as exc:
-                        file_engine_errors += 1
-                        record_ocr_error(
-                            connection,
-                            file_hash,
-                            run_id,
-                            annotation_engine=INFINITY_ENGINE,
-                            reader_provider="local-infinity-parser2",
-                            reader_model=options.infinity_model,
-                            exc=exc,
-                        )
-                        log(f"Infinity Parser2 failed for {path}: {exc}")
-                if MINERU_NORMALIZED_ENGINE in pending_engines:
-                    try:
-                        mineru_normalized_regions = process_mineru_normalized(
-                            connection,
-                            path,
-                            file_hash,
-                            run_id,
-                            options,
-                            log,
-                        )
-                        file_region_count += mineru_normalized_regions
-                    except Exception as exc:
-                        file_engine_errors += 1
-                        record_ocr_error(
-                            connection,
-                            file_hash,
-                            run_id,
-                            annotation_engine=MINERU_NORMALIZED_ENGINE,
-                            reader_provider="local-mineru",
-                            reader_model=f"mineru-{options.mineru_backend}-normalized-jpg",
-                            exc=exc,
-                        )
-                        log(f"Normalized MinerU failed for {path}: {exc}")
-                if "lmstudio" in pending_engines:
-                    lmstudio_summary = process_lmstudio_profiles(
+            except Exception as exc:
+                plan.engine_errors += 1
+                log(f"Docling orientation heuristic failed for {plan.path}: {exc}")
+            if plan.preview_cache_pending:
+                _run_preview_step(connection, plan, run_id, log)
+            if DOCLING_NORMALIZED_ENGINE in plan.pending_engines:
+                _run_ocr_step(
+                    connection,
+                    plan,
+                    run_id,
+                    DOCLING_NORMALIZED_ENGINE,
+                    "local-docling",
+                    "docling-normalized-jpg",
+                    lambda: process_docling_normalized(
                         connection,
-                        path,
-                        file_hash,
+                        plan.path,
+                        plan.file_hash,
                         run_id,
                         options,
                         log,
+                    ),
+                    log,
+                )
+            if "mineru" in plan.pending_engines:
+                _run_ocr_step(
+                    connection,
+                    plan,
+                    run_id,
+                    "mineru",
+                    "local-mineru",
+                    f"mineru-{options.mineru_backend}",
+                    lambda: process_mineru(
+                        connection,
+                        plan.path,
+                        plan.file_hash,
+                        run_id,
+                        options,
+                        log,
+                    ),
+                    log,
+                )
+            if MINERU_NORMALIZED_ENGINE in plan.pending_engines:
+                _run_ocr_step(
+                    connection,
+                    plan,
+                    run_id,
+                    MINERU_NORMALIZED_ENGINE,
+                    "local-mineru",
+                    f"mineru-{options.mineru_backend}-normalized-jpg",
+                    lambda: process_mineru_normalized(
+                        connection,
+                        plan.path,
+                        plan.file_hash,
+                        run_id,
+                        options,
+                        log,
+                    ),
+                    log,
+                )
+            span_set_attributes(
+                file_span,
+                {
+                    "chunk.count": plan.chunk_count,
+                    "region.count": plan.region_count,
+                    "preview.image_count": plan.preview_image_count,
+                    "engine.error_count": plan.engine_errors,
+                },
+            )
+    return 0
+
+
+def _run_infinity_group(
+    connection: DuckConnection,
+    plans: list[FileExecutionPlan],
+    run_id: int,
+    options: IngestOptions,
+    log: Callable[[str], None],
+) -> int:
+    infinity_plans = [plan for plan in plans if INFINITY_ENGINE in plan.pending_engines]
+    if not infinity_plans:
+        return 0
+    infinity_options = InfinityOptions(
+        model=options.infinity_model,
+        backend=options.infinity_backend,
+        batch_size=options.infinity_batch_size,
+        device=options.infinity_device,
+        torch_dtype=options.infinity_torch_dtype,
+    )
+    if infinity_options.backend == "lmstudio":
+        try:
+            with _recorded_lmstudio_lease(
+                connection,
+                run_id=run_id,
+                execution_key=_lmstudio_execution_key(
+                    options.lmstudio_base_url, infinity_options.model
+                ),
+                model=infinity_options.model,
+                base_url=options.lmstudio_base_url,
+                timeout_seconds=min(options.lmstudio_timeout_seconds, 60.0),
+                enabled=options.lmstudio_maximize_context,
+                log=log,
+            ):
+                for plan in infinity_plans:
+                    _run_infinity_step(
+                        connection, plan, run_id, options, log, lease=False
                     )
-                    file_region_count += lmstudio_summary.region_count
-                    file_engine_errors += lmstudio_summary.error_count
-                for fusion_profile in requested_fusion_outputs:
-                    try:
-                        fused_regions = process_fusion(
-                            connection,
-                            path,
-                            file_hash,
-                            run_id,
-                            fusion_profile,
-                            log,
-                        )
-                        file_region_count += fused_regions
-                    except Exception as exc:
-                        file_engine_errors += 1
-                        record_ocr_error(
-                            connection,
-                            file_hash,
-                            run_id,
-                            annotation_engine=fusion_profile.annotation_engine,
-                            reader_provider=FUSION_PROVIDER,
-                            reader_model=FUSION_MODEL,
-                            exc=exc,
-                        )
-                        log(f"Region fusion failed for {path}: {exc}")
+        except Exception as exc:
+            log(f"Infinity Parser2 LM Studio batch failed before execution: {exc}")
+            for plan in infinity_plans:
+                plan.engine_errors += 1
+                record_ocr_error(
+                    connection,
+                    plan.file_hash,
+                    run_id,
+                    annotation_engine=INFINITY_ENGINE,
+                    reader_provider="local-infinity-parser2",
+                    reader_model=infinity_options.model,
+                    exc=exc,
+                )
+                fail_work_unit(
+                    connection,
+                    run_id,
+                    _work_key("annotation", INFINITY_ENGINE, plan.file_hash),
+                    _error_detail(exc),
+                )
+        return 0
+    for plan in infinity_plans:
+        _run_infinity_step(connection, plan, run_id, options, log, lease=True)
+    return 0
 
-                if markdown_pending:
-                    try:
-                        markdown_summary = process_page_markdown(
-                            connection,
-                            path,
-                            file_hash,
-                            run_id,
-                            options,
-                            log,
-                            None,
-                        )
-                        file_engine_errors += markdown_summary.error_count
-                    except Exception as exc:
-                        file_engine_errors += 1
-                        log(
-                            f"Page Markdown generation failed for {path}: {_error_detail(exc)}"
-                        )
 
-                if file_engine_errors:
-                    errors += file_engine_errors
-                if (
-                    file_chunk_count
-                    or file_region_count
-                    or pending_engines
-                    or markdown_pending
-                    or file_preview_image_count
+def _run_markdown_groups(
+    connection: DuckConnection,
+    plans: list[FileExecutionPlan],
+    run_id: int,
+    options: IngestOptions,
+    log: Callable[[str], None],
+) -> int:
+    markdown_plans = [plan for plan in plans if plan.markdown_pending]
+    if not markdown_plans:
+        return 0
+    requested = requested_markdown_engines(options)
+    local_markdown = [
+        engine
+        for engine in requested
+        if engine in {MARKITDOWN_MARKDOWN_ENGINE, MARKITDOWN_CU_MARKDOWN_ENGINE}
+    ]
+    if local_markdown:
+        _run_markdown_engines(
+            connection, markdown_plans, run_id, options, log, local_markdown
+        )
+    if INFINITY_MARKDOWN_ENGINE in requested:
+        infinity_options = InfinityOptions(
+            model=options.infinity_model,
+            backend=options.infinity_backend,
+            batch_size=options.infinity_batch_size,
+            device=options.infinity_device,
+            torch_dtype=options.infinity_torch_dtype,
+        )
+        if infinity_options.backend == "lmstudio":
+            try:
+                with _recorded_lmstudio_lease(
+                    connection,
+                    run_id=run_id,
+                    execution_key=_lmstudio_execution_key(
+                        options.lmstudio_base_url, infinity_options.model
+                    ),
+                    model=infinity_options.model,
+                    base_url=options.lmstudio_base_url,
+                    timeout_seconds=min(options.lmstudio_timeout_seconds, 60.0),
+                    enabled=options.lmstudio_maximize_context,
+                    log=log,
                 ):
-                    files_processed += 1
-                log(
-                    f"Stored OCR outputs for {path}; chunks={file_chunk_count}, "
-                    f"regions={file_region_count}, preview_images={file_preview_image_count}, "
-                    f"engine_errors={file_engine_errors}"
-                )
-                span_set_attributes(
-                    file_span,
-                    {
-                        "ingest.status": "processed"
-                        if file_engine_errors == 0
-                        else "error",
-                        "annotation.engines": ",".join(engines),
-                        "chunk.count": file_chunk_count,
-                        "region.count": file_region_count,
-                        "preview.image_count": file_preview_image_count,
-                        "engine.error_count": file_engine_errors,
-                    },
-                )
-                chunks_created += file_chunk_count
+                    _run_markdown_engines(
+                        connection,
+                        markdown_plans,
+                        run_id,
+                        options,
+                        log,
+                        [INFINITY_MARKDOWN_ENGINE],
+                        lease_lmstudio=False,
+                    )
             except Exception as exc:
-                mark_span_error(file_span, exc)
-                span_set_attributes(
-                    file_span,
-                    {
-                        "file.hash": file_hash,
-                        "ingest.status": "error",
-                    },
+                _fail_markdown_group(
+                    connection,
+                    markdown_plans,
+                    run_id,
+                    [INFINITY_MARKDOWN_ENGINE],
+                    exc,
+                    log,
                 )
-                log(f"Error while processing {path}: {exc}")
-                errors += 1
-                record_docling_error(connection, file_hash, run_id, exc)
+        else:
+            _run_markdown_engines(
+                connection,
+                markdown_plans,
+                run_id,
+                options,
+                log,
+                [INFINITY_MARKDOWN_ENGINE],
+            )
+    return 0
 
-    status = "ok" if errors == 0 else "completed_with_errors"
-    connection.execute(
-        """
-        UPDATE ingest_runs
-        SET finished_at = current_timestamp, status = ?, error = ?
-        WHERE ingest_run_id = ?
-        """,
-        [status, f"{errors} OCR engine run(s) failed" if errors else None, run_id],
+
+def _run_docling_step(  # noqa: PLR0913
+    connection: DuckConnection,
+    plan: FileExecutionPlan,
+    run_id: int,
+    config: RuntimeConfig,
+    options: IngestOptions,
+    log: Callable[[str], None],
+) -> None:
+    work_key = _work_key("annotation", "docling", plan.file_hash)
+    start_work_unit(connection, run_id, work_key)
+    try:
+        chunks, regions = _process_docling(
+            connection,
+            plan.path,
+            plan.file_hash,
+            run_id,
+            config,
+            options,
+            log,
+        )
+        plan.chunk_count += chunks
+        plan.region_count += regions
+        plan.processed = True
+        finish_work_unit(
+            connection,
+            run_id,
+            work_key,
+            result={"chunk_count": chunks, "region_count": regions},
+        )
+    except Exception as exc:
+        plan.engine_errors += 1
+        record_docling_error(connection, plan.file_hash, run_id, exc)
+        fail_work_unit(connection, run_id, work_key, _error_detail(exc))
+        log(f"Docling failed for {plan.path}: {exc}")
+
+
+def _run_preview_step(
+    connection: DuckConnection,
+    plan: FileExecutionPlan,
+    run_id: int,
+    log: Callable[[str], None],
+) -> None:
+    work_key = _work_key("artifact", "preview_cache", plan.file_hash)
+    start_work_unit(connection, run_id, work_key)
+    try:
+        with traced_span(
+            "trapo.ingest.preview_cache",
+            attributes={"file.hash": plan.file_hash},
+        ) as preview_span:
+            image_count = _process_preview_cache(
+                connection,
+                plan.path,
+                plan.file_hash,
+                log,
+            )
+            _record_preview_artifacts(connection, run_id, plan.file_hash)
+            span_set_attributes(preview_span, {"preview.image_count": image_count})
+        plan.preview_image_count = image_count
+        plan.processed = True
+        finish_work_unit(
+            connection,
+            run_id,
+            work_key,
+            result={"preview_image_count": image_count},
+        )
+    except Exception as exc:
+        plan.engine_errors += 1
+        fail_work_unit(connection, run_id, work_key, _error_detail(exc))
+        log(f"Preview cache rendering failed for {plan.path}: {exc}")
+
+
+def _run_ocr_step(  # noqa: PLR0913
+    connection: DuckConnection,
+    plan: FileExecutionPlan,
+    run_id: int,
+    annotation_engine: str,
+    reader_provider: str,
+    reader_model: str,
+    action: Callable[[], int],
+    log: Callable[[str], None],
+) -> None:
+    work_key = _work_key("annotation", annotation_engine, plan.file_hash)
+    start_work_unit(connection, run_id, work_key)
+    try:
+        region_count = action()
+        plan.region_count += region_count
+        plan.processed = True
+        finish_work_unit(
+            connection,
+            run_id,
+            work_key,
+            result={"region_count": region_count},
+        )
+    except Exception as exc:
+        plan.engine_errors += 1
+        record_ocr_error(
+            connection,
+            plan.file_hash,
+            run_id,
+            annotation_engine=annotation_engine,
+            reader_provider=reader_provider,
+            reader_model=reader_model,
+            exc=exc,
+        )
+        fail_work_unit(connection, run_id, work_key, _error_detail(exc))
+        log(f"{annotation_engine} failed for {plan.path}: {exc}")
+
+
+def _run_infinity_step(  # noqa: PLR0913
+    connection: DuckConnection,
+    plan: FileExecutionPlan,
+    run_id: int,
+    options: IngestOptions,
+    log: Callable[[str], None],
+    *,
+    lease: bool,
+) -> None:
+    work_key = _work_key("annotation", INFINITY_ENGINE, plan.file_hash)
+    start_work_unit(connection, run_id, work_key)
+    try:
+        regions = process_infinity(
+            connection,
+            plan.path,
+            plan.file_hash,
+            run_id,
+            options,
+            log,
+            lease_lmstudio=lease,
+        )
+        plan.region_count += regions
+        plan.processed = True
+        finish_work_unit(connection, run_id, work_key, result={"region_count": regions})
+    except Exception as exc:
+        plan.engine_errors += 1
+        record_ocr_error(
+            connection,
+            plan.file_hash,
+            run_id,
+            annotation_engine=INFINITY_ENGINE,
+            reader_provider="local-infinity-parser2",
+            reader_model=options.infinity_model,
+            exc=exc,
+        )
+        fail_work_unit(connection, run_id, work_key, _error_detail(exc))
+        log(f"Infinity Parser2 failed for {plan.path}: {exc}")
+
+
+def _fail_markdown_group(  # noqa: PLR0913
+    connection: DuckConnection,
+    plans: list[FileExecutionPlan],
+    run_id: int,
+    markdown_engines: list[str],
+    exc: Exception,
+    log: Callable[[str], None],
+) -> None:
+    log(f"Page Markdown model batch failed before execution: {_error_detail(exc)}")
+    for plan in plans:
+        for markdown_engine in markdown_engines:
+            plan.engine_errors += 1
+            fail_work_unit(
+                connection,
+                run_id,
+                _work_key("markdown", markdown_engine, plan.file_hash),
+                _error_detail(exc),
+            )
+
+
+def _run_markdown_engines(  # noqa: PLR0913
+    connection: DuckConnection,
+    plans: list[FileExecutionPlan],
+    run_id: int,
+    options: IngestOptions,
+    log: Callable[[str], None],
+    markdown_engines: list[str],
+    *,
+    context_info: LmStudioContextInfo | None = None,
+    lease_lmstudio: bool = True,
+) -> None:
+    for plan in plans:
+        for markdown_engine in markdown_engines:
+            work_key = _work_key("markdown", markdown_engine, plan.file_hash)
+            start_work_unit(connection, run_id, work_key)
+            try:
+                summary = process_page_markdown(
+                    connection,
+                    plan.path,
+                    plan.file_hash,
+                    run_id,
+                    options,
+                    log,
+                    context_info,
+                    markdown_engines=[markdown_engine],
+                    lease_lmstudio=lease_lmstudio,
+                )
+                if summary.error_count:
+                    plan.engine_errors += summary.error_count
+                    fail_work_unit(
+                        connection,
+                        run_id,
+                        work_key,
+                        f"{summary.error_count} page Markdown page(s) failed",
+                        result={
+                            "page_count": summary.page_count,
+                            "error_count": summary.error_count,
+                            "errors": summary.errors or [],
+                        },
+                    )
+                else:
+                    finish_work_unit(
+                        connection,
+                        run_id,
+                        work_key,
+                        result={"page_count": summary.page_count},
+                    )
+                plan.processed = True
+            except Exception as exc:
+                plan.engine_errors += 1
+                fail_work_unit(connection, run_id, work_key, _error_detail(exc))
+                log(
+                    f"Page Markdown generation failed for {plan.path}: {_error_detail(exc)}"
+                )
+
+
+def _upsert_file_work_unit(  # noqa: PLR0913
+    connection: DuckConnection,
+    run_id: int,
+    plan: FileExecutionPlan,
+    *,
+    phase: str,
+    engine: str,
+    provider: str,
+    model: str,
+    execution_key: str,
+    profile: str | None = None,
+) -> None:
+    upsert_work_unit(
+        connection,
+        WorkUnit(
+            ingest_run_id=run_id,
+            work_key=_work_key(phase, engine, plan.file_hash, profile=profile),
+            file_hash=plan.file_hash,
+            phase=phase,
+            engine=engine,
+            provider=provider,
+            model=model,
+            profile=profile,
+            execution_key=execution_key,
+            metadata={"source_path": str(plan.path)},
+        ),
     )
-    deactivate_diagnostic_run()
-    return IngestSummary(
-        files_seen=files_seen,
-        files_processed=files_processed,
-        files_skipped=files_skipped,
-        chunks_created=chunks_created,
-        errors=errors,
+
+
+def _record_preview_artifacts(
+    connection: DuckConnection,
+    run_id: int,
+    file_hash: str,
+) -> None:
+    for image in read_document_preview_images(connection, file_hash):
+        upsert_page_artifact(
+            connection,
+            PageArtifact(
+                ingest_run_id=run_id,
+                file_hash=file_hash,
+                page_no=image.page_no,
+                variant=f"preview:{image.variant}",
+                page_width=image.page_width,
+                page_height=image.page_height,
+                render_width=image.render_width,
+                render_height=image.render_height,
+                mime_type=image.mime_type,
+                image_sha256=image.image_sha256,
+                cache_path=image.cache_path,
+                source_variant=image.variant,
+                metadata=image.metadata,
+            ),
+        )
+
+
+@contextmanager
+def _recorded_lmstudio_lease(  # noqa: PLR0913
+    connection: DuckConnection,
+    *,
+    run_id: int,
+    execution_key: str,
+    model: str,
+    base_url: str,
+    timeout_seconds: float,
+    enabled: bool,
+    log: Callable[[str], None],
+) -> Any:
+    lease_id = start_model_lease(
+        connection,
+        ingest_run_id=run_id,
+        execution_key=execution_key,
+        provider="lmstudio",
+        model=model,
+        requested_context_tokens=supported_lmstudio_model_max_context(model),
+        metadata={
+            "base_url": base_url,
+            "generation_parameters": _lmstudio_generation_parameters(),
+        },
     )
+    context_info: LmStudioContextInfo | None = None
+    try:
+        with lmstudio_model_lease(
+            base_url=base_url,
+            model=model,
+            timeout_seconds=timeout_seconds,
+            enabled=enabled,
+            log=log,
+        ) as lease_context:
+            context_info = lease_context
+            yield lease_context
+        finish_model_lease(
+            connection,
+            lease_id,
+            status="ok",
+            verified_context_tokens=(
+                context_info.effective_context_tokens if context_info else None
+            ),
+            metadata={
+                **_lmstudio_lease_metadata(base_url, context_info),
+            },
+        )
+    except Exception as exc:
+        finish_model_lease(
+            connection,
+            lease_id,
+            status="error",
+            verified_context_tokens=(
+                context_info.effective_context_tokens if context_info else None
+            ),
+            error=_error_detail(exc),
+            metadata={
+                **_lmstudio_lease_metadata(base_url, context_info, fallback="error"),
+            },
+        )
+        raise
+
+
+def _lmstudio_generation_parameters() -> dict[str, object]:
+    return {"repeat_penalty": DEFAULT_LMSTUDIO_REPEAT_PENALTY}
+
+
+def _lmstudio_lease_metadata(
+    base_url: str,
+    context_info: LmStudioContextInfo | None,
+    *,
+    fallback: str = "disabled",
+) -> dict[str, object]:
+    metadata: dict[str, object] = {
+        "base_url": base_url,
+        "generation_parameters": _lmstudio_generation_parameters(),
+        "load_status": context_info.load_status if context_info else fallback,
+    }
+    if context_info is not None:
+        metadata.update(
+            {
+                "native_base_url": context_info.native_base_url,
+                "max_context_tokens": context_info.max_context_tokens,
+                "loaded_context_tokens": context_info.loaded_context_tokens,
+                "applied_context_tokens": context_info.applied_context_tokens,
+                "requested_repeat_penalty": context_info.requested_repeat_penalty,
+            }
+        )
+    return metadata
+
+
+def _engine_identity(  # noqa: PLR0911
+    engine: str,
+    options: IngestOptions,
+) -> tuple[str, str, str]:
+    if engine == "docling":
+        return "local-docling", "docling", "local:docling"
+    if engine == DOCLING_NORMALIZED_ENGINE:
+        return "local-docling", "docling-normalized-jpg", "local:docling_normalized"
+    if engine == "mineru":
+        model = f"mineru-{options.mineru_backend}"
+        return "local-mineru", model, f"local:mineru:{options.mineru_backend}"
+    if engine == MINERU_NORMALIZED_ENGINE:
+        model = f"mineru-{options.mineru_backend}-normalized-jpg"
+        return (
+            "local-mineru",
+            model,
+            f"local:mineru_normalized:{options.mineru_backend}",
+        )
+    if engine == INFINITY_ENGINE:
+        infinity_options = InfinityOptions(
+            model=options.infinity_model,
+            backend=options.infinity_backend,
+            batch_size=options.infinity_batch_size,
+            device=options.infinity_device,
+            torch_dtype=options.infinity_torch_dtype,
+        )
+        provider = "local-infinity-parser2"
+        execution_key = (
+            _lmstudio_execution_key(options.lmstudio_base_url, infinity_options.model)
+            if infinity_options.backend == "lmstudio"
+            else f"local:infinity:{infinity_options.backend}:{infinity_options.model}"
+        )
+        return provider, infinity_options.model, execution_key
+    return "local", engine, f"local:{engine}"
+
+
+def _markdown_identity(  # noqa: PLR0911
+    markdown_engine: str,
+    options: IngestOptions,
+) -> tuple[str, str, str]:
+    if markdown_engine == INFINITY_MARKDOWN_ENGINE:
+        infinity_options = InfinityOptions(
+            model=options.infinity_model,
+            backend=options.infinity_backend,
+            batch_size=options.infinity_batch_size,
+            device=options.infinity_device,
+            torch_dtype=options.infinity_torch_dtype,
+        )
+        execution_key = (
+            _lmstudio_execution_key(options.lmstudio_base_url, infinity_options.model)
+            if infinity_options.backend == "lmstudio"
+            else f"local:infinity_markdown:{infinity_options.backend}:{infinity_options.model}"
+        )
+        return "local-infinity-parser2", infinity_options.model, execution_key
+    if markdown_engine == MARKITDOWN_CU_MARKDOWN_ENGINE:
+        return (
+            "azure-content-understanding",
+            "markitdown-content-understanding",
+            "local:markitdown_cu",
+        )
+    return "local-markitdown", "markitdown-ocr", "local:markitdown"
+
+
+def _lmstudio_execution_key(base_url: str, model: str) -> str:
+    return f"lmstudio:{base_url.rstrip('/')}:{model}"
+
+
+def _work_key(
+    phase: str,
+    engine: str,
+    file_hash: str,
+    *,
+    profile: str | None = None,
+) -> str:
+    profile_part = f":{profile}" if profile else ""
+    return f"{phase}:{engine}{profile_part}:{file_hash}"
 
 
 def _process_docling(  # noqa: PLR0913
@@ -684,7 +1240,6 @@ def _supported_engines(path: Path, options: IngestOptions) -> list[str]:
         in {
             "docling",
             "mineru",
-            "lmstudio",
             INFINITY_ENGINE,
             DOCLING_NORMALIZED_ENGINE,
             MINERU_NORMALIZED_ENGINE,
@@ -721,11 +1276,6 @@ def _requested_engines(value: str) -> list[str]:
             else normalized
         )
         normalized = (
-            "lmstudio"
-            if normalized in {"lmstudio", "lm-studio", "local-lmstudio"}
-            else normalized
-        )
-        normalized = (
             INFINITY_ENGINE
             if normalized
             in {
@@ -737,7 +1287,7 @@ def _requested_engines(value: str) -> list[str]:
             else normalized
         )
         if normalized == "all":
-            for default_engine in ("docling", "mineru", "lmstudio", INFINITY_ENGINE):
+            for default_engine in ("docling", "mineru", INFINITY_ENGINE):
                 if default_engine not in engines:
                     engines.append(default_engine)
             continue
@@ -754,7 +1304,6 @@ def _requested_engines(value: str) -> list[str]:
             in {
                 "docling",
                 "mineru",
-                "lmstudio",
                 INFINITY_ENGINE,
                 DOCLING_NORMALIZED_ENGINE,
                 MINERU_NORMALIZED_ENGINE,
@@ -773,11 +1322,7 @@ def _engine_complete(
 ) -> bool:
     if annotation_engine == "docling":
         return _docling_complete(connection, file_hash)
-    if annotation_engine == "lmstudio":
-        return all(
-            _ocr_engine_complete(connection, file_hash, profile_engine)
-            for profile_engine in lmstudio_profile_engines(options)
-        )
+    del options
     return _ocr_engine_complete(connection, file_hash, annotation_engine)
 
 

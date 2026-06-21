@@ -33,7 +33,7 @@ SECOND_PAGE_NO = 2
 
 
 def test_requested_engines_all_includes_infinity() -> None:
-    assert _requested_engines("all") == ["docling", "mineru", "lmstudio", "infinity"]
+    assert _requested_engines("all") == ["docling", "mineru", "infinity"]
     assert _requested_engines("local-infinity-parser2") == ["infinity"]
 
 
@@ -41,7 +41,7 @@ def test_requested_markdown_engines_all_includes_infinity() -> None:
     engines = requested_markdown_engines(IngestOptions(page_markdown_engines="all"))
 
     assert INFINITY_MARKDOWN_ENGINE in engines
-    assert engines.index(INFINITY_MARKDOWN_ENGINE) == 1
+    assert engines.index(INFINITY_MARKDOWN_ENGINE) == 0
 
 
 def test_infinity_model_alias_resolves_flash_model() -> None:

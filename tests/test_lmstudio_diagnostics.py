@@ -3,14 +3,19 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
 from trapo.config import RuntimeConfig
 from trapo.db import connect
 from trapo.diagnostics import activate_diagnostic_run, deactivate_diagnostic_run
-from trapo.ingest.lmstudio_client import LmStudioClient
+from trapo.ingest.lmstudio_chat import (
+    ChatPayloadRequest,
+    HttpClient,
+    execute_chat_completion,
+)
+from trapo.ingest.lmstudio_client import CHAT_COMPLETIONS_PATH
 from trapo.ingest.lmstudio_models import DEFAULT_LMSTUDIO_CONTEXT_TOKENS
 from trapo.ingest.page_images import RenderedPageImage
 from trapo.migrations import apply_migrations
@@ -38,15 +43,9 @@ def test_lmstudio_call_records_request_response_and_attachment(
         )
         activate_diagnostic_run(connection, 7)
         try:
-            client = LmStudioClient(
-                model="test-model",
-                http_client=_SuccessHttpClient("# Receipt\n\nTotal 42.00"),
-            )
-            response, _raw = client.generate_page_markdown(
-                page,
-                prompt="Return only Markdown for this page.",
-                max_tokens=DEFAULT_LMSTUDIO_CONTEXT_TOKENS,
-                temperature=0.0,
+            response, _raw = _chat_completion(
+                _SuccessHttpClient("# Receipt\n\nTotal 42.00"),
+                page=page,
             )
         finally:
             deactivate_diagnostic_run()
@@ -56,7 +55,7 @@ def test_lmstudio_call_records_request_response_and_attachment(
             "SELECT pipeline_step, page_no, status FROM ingest_diagnostic_spans"
         ).fetchall()
 
-    assert response.markdown == "# Receipt\n\nTotal 42.00"
+    assert response == "# Receipt\n\nTotal 42.00"
     assert [event["name"] for event in events] == ["llm.request", "llm.response"]
     request_attrs = events[0]["attributes_json"]
     assert request_attrs["llm.request.prompt"] == "Return only Markdown for this page."
@@ -92,17 +91,8 @@ def test_lmstudio_http_error_records_status_and_response_body(
         )
         activate_diagnostic_run(connection, 8)
         try:
-            client = LmStudioClient(
-                model="test-model",
-                http_client=_ErrorHttpClient("context window exceeded"),
-            )
             try:
-                client.generate_page_markdown(
-                    _page(),
-                    prompt="Return only Markdown for this page.",
-                    max_tokens=DEFAULT_LMSTUDIO_CONTEXT_TOKENS,
-                    temperature=0.0,
-                )
+                _chat_completion(_ErrorHttpClient("context window exceeded"))
             except httpx.HTTPStatusError:
                 pass
         finally:
@@ -123,6 +113,27 @@ def test_lmstudio_http_error_records_status_and_response_body(
     assert error_attrs["llm.error.response_text"] == "context window exceeded"
     assert error_attrs["llm.error.type"] == "HTTPStatusError"
     assert spans == [("lmstudio_chat_completion", 3, "error")]
+
+
+def _chat_completion(
+    http_client: object,
+    *,
+    page: RenderedPageImage | None = None,
+) -> tuple[str, dict[str, Any]]:
+    return execute_chat_completion(
+        cast(HttpClient, http_client),
+        endpoint=f"http://localhost:1234/v1{CHAT_COMPLETIONS_PATH}",
+        stage="infinity_doc2md",
+        request=ChatPayloadRequest(
+            model="test-model",
+            page=page or _page(),
+            prompt="Return only Markdown for this page.",
+            max_tokens=DEFAULT_LMSTUDIO_CONTEXT_TOKENS,
+            temperature=0.0,
+            structured_output=False,
+        ),
+        parse=lambda content, _response_json: content,
+    )
 
 
 def _page() -> RenderedPageImage:

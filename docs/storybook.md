@@ -26,7 +26,9 @@ Stories are grouped by component family:
 - `Features/Diagnostics`
 
 When a shared UI primitive, workbench component, document surface, or
-diagnostics surface changes, add or update a story in the same change.
+diagnostics surface changes, add or update a story in the same change. The
+diagnostics stories cover the Progress, Performance, Models, Waterfall, and
+details-pane surfaces with synthetic fixtures.
 
 ## Data policy
 

@@ -18,10 +18,8 @@ export interface DocumentDetail {
   docling_error?: string | null;
   mineru_status?: string | null;
   mineru_error?: string | null;
-  lmstudio_status?: string | null;
-  lmstudio_error?: string | null;
-  fusion_status?: string | null;
-  fusion_error?: string | null;
+  infinity_status?: string | null;
+  infinity_error?: string | null;
   chunk_count?: number;
   region_count?: number;
   pages?: PageInfo[];

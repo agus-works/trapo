@@ -9,15 +9,15 @@ Trapo can use `infly/Infinity-Parser2-Flash` through the
 - Page Markdown engine: `infinity_markdown`
 
 `--annotation-engines all` includes `infinity`. `--page-markdown-engines all`
-includes `infinity_markdown`. The normal defaults remain `docling,mineru` for
-annotations and `markitdown` for page Markdown.
+includes `infinity_markdown`; the default page Markdown generator is also
+`infinity_markdown`.
 
 ## Ingest Shape
 
 The annotation engine reads normalized preview JPGs so its boxes align with the
 web preview. Raw parser output is stored in `ocr_documents`, while normalized
 layout boxes are stored in `document_regions` and participate in region-term
-search and fusion.
+search.
 
 Infinity Parser2 returns `[x1, y1, x2, y2]` boxes in the coordinate space of the
 rendered preview image it parsed. Trapo stores that preview page size in region
@@ -51,7 +51,10 @@ are passed through unchanged.
 
 Use `--infinity-backend lmstudio` when Infinity Parser2 Flash is hosted by the
 local LM Studio OpenAI-compatible API at `http://localhost:1234/v1`. In that
-mode, the same short model alias is preserved as the LM Studio model ID.
+mode, the same short model alias is preserved as the LM Studio model ID. Trapo
+loads `infinity-parser2-flash` at the allowlisted max context, runs all pending
+Infinity units for that batch, and unloads it before switching to another
+LM Studio-backed batch.
 
 The package currently depends on a newer `transformers` line than MinerU, so it
 is not declared as a base Trapo dependency. Trapo first uses an in-process
@@ -74,7 +77,8 @@ PDFs, so page images are generated and normalized once before engine execution.
 If a multi-page Infinity batch fails, Trapo retries each page in that batch with
 the already-created parser instance and records only the failed page as an
 engine error. Successful pages in the same file still persist annotation regions
-or page Markdown.
+or page Markdown. When the backend is LM Studio, model loading is controlled by
+the outer ingest executor rather than by each file-level Infinity call.
 
 ## Example
 
@@ -87,4 +91,4 @@ uv sync && uv run trapo init --db quack:localhost:9494 && uv run trapo status --
 Infinity Parser2 currently focuses on English and Chinese documents, may degrade
 on multilingual content, and does not preserve fine-grained text styling such
 as bold or italic. Complex charts and rotated tables can still need comparison
-against Docling, MinerU, LM Studio, and fused overlays.
+against Docling and MinerU overlays.

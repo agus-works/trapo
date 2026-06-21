@@ -36,15 +36,15 @@ export function engineLabel(engine: string): string {
   if (engine === 'mineru_normalized') {
     return 'MinerU normalized';
   }
+  if (engine === 'infinity') {
+    return 'Infinity Parser2';
+  }
   return engine;
 }
 
 export function engineColor(engine: string): string {
-  if (engine.startsWith('fusion')) {
-    return '#7c8cf8';
-  }
-  if (engine.startsWith('lmstudio')) {
-    return '#d7b84f';
+  if (engine === 'infinity') {
+    return '#8f86ff';
   }
   if (engine === 'docling_normalized') {
     return '#f07d5f';

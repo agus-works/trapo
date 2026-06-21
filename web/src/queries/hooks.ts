@@ -28,7 +28,7 @@ export function useDocumentRegionsQuery(fileHash: string | null) {
 export function useDocumentMarkdownQuery(
   fileHash: string | null,
   pageNo?: number,
-  markdownEngine = 'lmstudio_markdown',
+  markdownEngine = 'infinity_markdown',
 ) {
   return useQuery({
     queryKey: fileHash
@@ -44,7 +44,7 @@ export function useDocumentMarkdownPrefetch(
   fileHash: string | null,
   activePageNo: number,
   pages: PageInfo[],
-  markdownEngine = 'lmstudio_markdown',
+  markdownEngine = 'infinity_markdown',
 ) {
   const queryClient = useQueryClient();
   useEffect(() => {
@@ -102,6 +102,30 @@ export function useDiagnosticTraceQuery(params: DiagnosticTraceParams) {
     queryKey: queryKeys.diagnosticTrace(params),
     queryFn: ({ signal }) => trapoApi.getDiagnosticTrace(params, signal),
     enabled: params.ingestRunId !== null && params.ingestRunId !== undefined,
+  });
+}
+
+export function useDiagnosticProgressQuery(ingestRunId?: number | null) {
+  return useQuery({
+    queryKey: queryKeys.diagnosticProgress(ingestRunId),
+    queryFn: ({ signal }) => trapoApi.getDiagnosticProgress(ingestRunId, signal),
+    enabled: ingestRunId !== null,
+  });
+}
+
+export function useDiagnosticAnalyticsQuery(ingestRunId?: number | null) {
+  return useQuery({
+    queryKey: queryKeys.diagnosticAnalytics(ingestRunId),
+    queryFn: ({ signal }) => trapoApi.getDiagnosticAnalytics(ingestRunId, signal),
+    enabled: ingestRunId !== null,
+  });
+}
+
+export function useDiagnosticModelsQuery(ingestRunId?: number | null) {
+  return useQuery({
+    queryKey: queryKeys.diagnosticModels(ingestRunId),
+    queryFn: ({ signal }) => trapoApi.getDiagnosticModels(ingestRunId, signal),
+    enabled: ingestRunId !== null,
   });
 }
 

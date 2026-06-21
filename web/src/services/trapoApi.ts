@@ -1,4 +1,7 @@
 import type {
+  DiagnosticAnalyticsPayload,
+  DiagnosticModelsPayload,
+  DiagnosticProgressPayload,
   DiagnosticRunRecord,
   DiagnosticTraceParams,
   DiagnosticTracePayload,
@@ -48,7 +51,7 @@ export const trapoApi = {
 
   getDocumentMarkdown(
     fileHash: string,
-    markdownEngine = 'lmstudio_markdown',
+    markdownEngine = 'infinity_markdown',
     pageNo?: number,
     signal?: AbortSignal,
   ): Promise<DocumentMarkdownPayload> {
@@ -71,6 +74,42 @@ export const trapoApi = {
 
   listDiagnosticRuns(signal?: AbortSignal): Promise<DiagnosticRunRecord[]> {
     return getJson<DiagnosticRunRecord[]>(buildApiUrl('/api/diagnostics/runs'), signal);
+  },
+
+  getDiagnosticProgress(
+    ingestRunId?: number | null,
+    signal?: AbortSignal,
+  ): Promise<DiagnosticProgressPayload> {
+    return getJson<DiagnosticProgressPayload>(
+      buildApiUrl('/api/diagnostics/progress', {
+        ingest_run_id: ingestRunId ?? undefined,
+      }),
+      signal,
+    );
+  },
+
+  getDiagnosticAnalytics(
+    ingestRunId?: number | null,
+    signal?: AbortSignal,
+  ): Promise<DiagnosticAnalyticsPayload> {
+    return getJson<DiagnosticAnalyticsPayload>(
+      buildApiUrl('/api/diagnostics/analytics', {
+        ingest_run_id: ingestRunId ?? undefined,
+      }),
+      signal,
+    );
+  },
+
+  getDiagnosticModels(
+    ingestRunId?: number | null,
+    signal?: AbortSignal,
+  ): Promise<DiagnosticModelsPayload> {
+    return getJson<DiagnosticModelsPayload>(
+      buildApiUrl('/api/diagnostics/models', {
+        ingest_run_id: ingestRunId ?? undefined,
+      }),
+      signal,
+    );
   },
 
   getDiagnosticTrace(

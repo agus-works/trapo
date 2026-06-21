@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from trapo.annotation_engines import ACTIVE_REGION_ENGINE_SQL_LIST
 from trapo.db import DuckConnection, table_exists
 from trapo.document_markdown_models import PageMarkdown
 from trapo.server.provenance import parse_json_value
@@ -62,10 +63,11 @@ def _ocr_rows(connection: DuckConnection, file_hash: str) -> list[tuple[object, 
     rows = []
     if table_exists(connection, "ocr_documents"):
         rows = connection.execute(
-            """
+            f"""
             SELECT annotation_engine, text, output_json, reader_provider, reader_model
             FROM ocr_documents
             WHERE file_hash = ? AND status = 'ok'
+              AND annotation_engine IN ({ACTIVE_REGION_ENGINE_SQL_LIST})
             """,
             [file_hash],
         ).fetchall()
@@ -87,7 +89,7 @@ def _preferred_ocr_row(
     rows: list[tuple[object, ...]],
 ) -> tuple[str, str, object, str, str]:
     preference = {
-        "fusion": 0,
+        "infinity": 0,
         "docling_normalized": 1,
         "mineru_normalized": 2,
         "docling": 3,

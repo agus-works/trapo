@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from trapo.annotation_engines import ACTIVE_REGION_ENGINE_SQL_LIST
 from trapo.annotation_settings import annotation_style_lookup, resolve_annotation_style
 from trapo.assets import image_page_info
 from trapo.db import DuckConnection, table_exists
@@ -39,7 +40,7 @@ REGION_KIND_BY_LABEL_FRAGMENT = (
     ("footer", "footer"),
 )
 ANNOTATION_ENGINE_ROW_INDEX = 6
-DISPLAY_SPACE_ENGINES = frozenset({"lmstudio"})
+DISPLAY_SPACE_ENGINES = frozenset[str]()
 NORMALIZED_PAGE_ENGINES = frozenset(
     {"docling_normalized", "mineru_normalized", "infinity"}
 )
@@ -192,12 +193,13 @@ def rebuild_document_terms(connection: DuckConnection, file_hash: str) -> int:
         return 0
     connection.execute("DELETE FROM document_terms WHERE file_hash = ?", [file_hash])
     rows = connection.execute(
-        """
+        f"""
         SELECT
             region_id, chunk_id, page_no, text, raw_bbox_json, region_kind,
             coalesce(annotation_engine, 'docling') AS annotation_engine
         FROM document_regions
         WHERE file_hash = ?
+          AND coalesce(annotation_engine, 'docling') IN ({ACTIVE_REGION_ENGINE_SQL_LIST})
         ORDER BY page_no, region_id
         """,
         [file_hash],
@@ -255,7 +257,7 @@ def persisted_region_overlays(
     if not table_exists(connection, "document_regions"):
         return []
     rows = connection.execute(
-        """
+        f"""
         SELECT
             r.region_id, r.chunk_id, r.chunk_index, r.page_no, r.source_ref, r.label,
             r.text, r.context_text, r.raw_bbox_json,
@@ -270,6 +272,7 @@ def persisted_region_overlays(
             ON v.file_hash = r.file_hash
            AND v.overlay_id = concat('region:', r.region_id)
         WHERE r.file_hash = ?
+          AND coalesce(r.annotation_engine, 'docling') IN ({ACTIVE_REGION_ENGINE_SQL_LIST})
         ORDER BY r.page_no, annotation_engine, r.chunk_index NULLS LAST, r.source_ref, r.region_id
         """,
         [file_hash],
@@ -368,9 +371,7 @@ def _metadata_page(metadata: dict[str, object], *, fallback: PageInfo) -> PageIn
 
 
 def _is_display_space_engine(annotation_engine: str) -> bool:
-    return annotation_engine in DISPLAY_SPACE_ENGINES or annotation_engine.startswith(
-        "fusion"
-    )
+    return annotation_engine in DISPLAY_SPACE_ENGINES
 
 
 def _delete_region_engine(

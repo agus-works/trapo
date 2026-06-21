@@ -325,6 +325,164 @@
         }
       }
     },
+    "/api/diagnostics/progress": {
+      "get": {
+        "summary": "Diagnostics Progress",
+        "operationId": "diagnostics_progress_api_diagnostics_progress_get",
+        "parameters": [
+          {
+            "name": "ingest_run_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ingest Run Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10000,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticProgressPayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diagnostics/analytics": {
+      "get": {
+        "summary": "Diagnostics Analytics",
+        "operationId": "diagnostics_analytics_api_diagnostics_analytics_get",
+        "parameters": [
+          {
+            "name": "ingest_run_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ingest Run Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticAnalyticsPayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diagnostics/models": {
+      "get": {
+        "summary": "Diagnostics Models",
+        "operationId": "diagnostics_models_api_diagnostics_models_get",
+        "parameters": [
+          {
+            "name": "ingest_run_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ingest Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticModelsPayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/documents": {
       "get": {
         "summary": "Documents",
@@ -1042,6 +1200,330 @@
         ],
         "title": "DatabaseStatusResponse"
       },
+      "DiagnosticAnalyticsPayload": {
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/DiagnosticAnalyticsSummary"
+          },
+          "phase_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticBreakdownRecord"
+            },
+            "type": "array",
+            "title": "Phase Breakdown"
+          },
+          "engine_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticBreakdownRecord"
+            },
+            "type": "array",
+            "title": "Engine Breakdown"
+          },
+          "model_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticBreakdownRecord"
+            },
+            "type": "array",
+            "title": "Model Breakdown"
+          },
+          "file_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticBreakdownRecord"
+            },
+            "type": "array",
+            "title": "File Breakdown"
+          },
+          "page_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticBreakdownRecord"
+            },
+            "type": "array",
+            "title": "Page Breakdown"
+          },
+          "error_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticBreakdownRecord"
+            },
+            "type": "array",
+            "title": "Error Breakdown"
+          },
+          "slow_work_units": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticWorkUnitRecord"
+            },
+            "type": "array",
+            "title": "Slow Work Units"
+          },
+          "slow_spans": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticSlowSpanRecord"
+            },
+            "type": "array",
+            "title": "Slow Spans"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticRecommendationRecord"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary"
+        ],
+        "title": "DiagnosticAnalyticsPayload"
+      },
+      "DiagnosticAnalyticsSummary": {
+        "properties": {
+          "ingest_run_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingest Run Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "unknown"
+          },
+          "source_directory": {
+            "type": "string",
+            "title": "Source Directory",
+            "default": ""
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "duration_ms": {
+            "type": "number",
+            "title": "Duration Ms",
+            "default": 0.0
+          },
+          "work_unit_count": {
+            "type": "integer",
+            "title": "Work Unit Count",
+            "default": 0
+          },
+          "failed_work_unit_count": {
+            "type": "integer",
+            "title": "Failed Work Unit Count",
+            "default": 0
+          },
+          "span_count": {
+            "type": "integer",
+            "title": "Span Count",
+            "default": 0
+          },
+          "failed_span_count": {
+            "type": "integer",
+            "title": "Failed Span Count",
+            "default": 0
+          },
+          "model_lease_count": {
+            "type": "integer",
+            "title": "Model Lease Count",
+            "default": 0
+          },
+          "failed_llm_duration_ms": {
+            "type": "number",
+            "title": "Failed Llm Duration Ms",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "title": "DiagnosticAnalyticsSummary"
+      },
+      "DiagnosticBatchRecord": {
+        "properties": {
+          "lease_id": {
+            "type": "integer",
+            "title": "Lease Id"
+          },
+          "ingest_run_id": {
+            "type": "integer",
+            "title": "Ingest Run Id"
+          },
+          "execution_key": {
+            "type": "string",
+            "title": "Execution Key"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "requested_context_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Context Tokens"
+          },
+          "verified_context_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified Context Tokens"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lease_id",
+          "ingest_run_id",
+          "execution_key",
+          "provider",
+          "model",
+          "status",
+          "started_at"
+        ],
+        "title": "DiagnosticBatchRecord"
+      },
+      "DiagnosticBreakdownRecord": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "duration_ms": {
+            "type": "number",
+            "title": "Duration Ms"
+          },
+          "unit_count": {
+            "type": "integer",
+            "title": "Unit Count"
+          },
+          "error_count": {
+            "type": "integer",
+            "title": "Error Count",
+            "default": 0
+          },
+          "file_count": {
+            "type": "integer",
+            "title": "File Count",
+            "default": 0
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count",
+            "default": 0
+          },
+          "max_duration_ms": {
+            "type": "number",
+            "title": "Max Duration Ms",
+            "default": 0.0
+          },
+          "share_percent": {
+            "type": "number",
+            "title": "Share Percent",
+            "default": 0.0
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "duration_ms",
+          "unit_count"
+        ],
+        "title": "DiagnosticBreakdownRecord"
+      },
       "DiagnosticEventRecord": {
         "properties": {
           "event_id": {
@@ -1135,6 +1617,278 @@
         ],
         "title": "DiagnosticEventRecord"
       },
+      "DiagnosticModelLeaseRecord": {
+        "properties": {
+          "lease_id": {
+            "type": "integer",
+            "title": "Lease Id"
+          },
+          "ingest_run_id": {
+            "type": "integer",
+            "title": "Ingest Run Id"
+          },
+          "execution_key": {
+            "type": "string",
+            "title": "Execution Key"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "requested_context_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Context Tokens"
+          },
+          "verified_context_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified Context Tokens"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "load_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Load Status"
+          },
+          "requested_parameters": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Requested Parameters"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          },
+          "switch_index": {
+            "type": "integer",
+            "title": "Switch Index",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "lease_id",
+          "ingest_run_id",
+          "execution_key",
+          "provider",
+          "model",
+          "status",
+          "started_at"
+        ],
+        "title": "DiagnosticModelLeaseRecord"
+      },
+      "DiagnosticModelsPayload": {
+        "properties": {
+          "ingest_run_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingest Run Id"
+          },
+          "leases": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticModelLeaseRecord"
+            },
+            "type": "array",
+            "title": "Leases"
+          }
+        },
+        "type": "object",
+        "title": "DiagnosticModelsPayload"
+      },
+      "DiagnosticProgressPayload": {
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/DiagnosticProgressSummary"
+          },
+          "work_units": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticWorkUnitRecord"
+            },
+            "type": "array",
+            "title": "Work Units"
+          },
+          "batches": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticBatchRecord"
+            },
+            "type": "array",
+            "title": "Batches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary"
+        ],
+        "title": "DiagnosticProgressPayload"
+      },
+      "DiagnosticProgressSummary": {
+        "properties": {
+          "ingest_run_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingest Run Id"
+          },
+          "total_units": {
+            "type": "integer",
+            "title": "Total Units",
+            "default": 0
+          },
+          "planned_units": {
+            "type": "integer",
+            "title": "Planned Units",
+            "default": 0
+          },
+          "running_units": {
+            "type": "integer",
+            "title": "Running Units",
+            "default": 0
+          },
+          "completed_units": {
+            "type": "integer",
+            "title": "Completed Units",
+            "default": 0
+          },
+          "failed_units": {
+            "type": "integer",
+            "title": "Failed Units",
+            "default": 0
+          },
+          "skipped_units": {
+            "type": "integer",
+            "title": "Skipped Units",
+            "default": 0
+          },
+          "percent_complete": {
+            "type": "number",
+            "title": "Percent Complete",
+            "default": 0.0
+          },
+          "estimated_remaining_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Remaining Ms"
+          }
+        },
+        "type": "object",
+        "title": "DiagnosticProgressSummary"
+      },
+      "DiagnosticRecommendationRecord": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Evidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "severity",
+          "title",
+          "detail"
+        ],
+        "title": "DiagnosticRecommendationRecord"
+      },
       "DiagnosticRunRecord": {
         "properties": {
           "ingest_run_id": {
@@ -1206,6 +1960,99 @@
           "status"
         ],
         "title": "DiagnosticRunRecord"
+      },
+      "DiagnosticSlowSpanRecord": {
+        "properties": {
+          "span_id": {
+            "type": "string",
+            "title": "Span Id"
+          },
+          "trace_id": {
+            "type": "string",
+            "title": "Trace Id"
+          },
+          "file_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Hash"
+          },
+          "page_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page No"
+          },
+          "pipeline_step": {
+            "type": "string",
+            "title": "Pipeline Step"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "annotation_engine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annotation Engine"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "duration_ms": {
+            "type": "number",
+            "title": "Duration Ms"
+          },
+          "error_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Type"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "span_id",
+          "trace_id",
+          "pipeline_step",
+          "category",
+          "status",
+          "duration_ms"
+        ],
+        "title": "DiagnosticSlowSpanRecord"
       },
       "DiagnosticSpanRecord": {
         "properties": {
@@ -1447,6 +2294,186 @@
         "type": "object",
         "title": "DiagnosticTraceSummary"
       },
+      "DiagnosticWorkUnitRecord": {
+        "properties": {
+          "work_unit_id": {
+            "type": "integer",
+            "title": "Work Unit Id"
+          },
+          "ingest_run_id": {
+            "type": "integer",
+            "title": "Ingest Run Id"
+          },
+          "work_key": {
+            "type": "string",
+            "title": "Work Key"
+          },
+          "file_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Hash"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "source_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Path"
+          },
+          "page_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page No"
+          },
+          "phase": {
+            "type": "string",
+            "title": "Phase"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile"
+          },
+          "execution_key": {
+            "type": "string",
+            "title": "Execution Key"
+          },
+          "artifact_variant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Variant"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "attempt_count": {
+            "type": "integer",
+            "title": "Attempt Count",
+            "default": 0
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "result": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Result"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "work_unit_id",
+          "ingest_run_id",
+          "work_key",
+          "phase",
+          "engine",
+          "provider",
+          "model",
+          "execution_key",
+          "status"
+        ],
+        "title": "DiagnosticWorkUnitRecord"
+      },
       "DocumentDetail": {
         "properties": {
           "file_hash": {
@@ -1551,7 +2578,7 @@
             ],
             "title": "Mineru Error"
           },
-          "lmstudio_status": {
+          "infinity_status": {
             "anyOf": [
               {
                 "type": "string"
@@ -1560,9 +2587,9 @@
                 "type": "null"
               }
             ],
-            "title": "Lmstudio Status"
+            "title": "Infinity Status"
           },
-          "lmstudio_error": {
+          "infinity_error": {
             "anyOf": [
               {
                 "type": "string"
@@ -1571,29 +2598,7 @@
                 "type": "null"
               }
             ],
-            "title": "Lmstudio Error"
-          },
-          "fusion_status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Fusion Status"
-          },
-          "fusion_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Fusion Error"
+            "title": "Infinity Error"
           },
           "chunk_count": {
             "type": "integer",
@@ -1863,7 +2868,7 @@
             ],
             "title": "Mineru Error"
           },
-          "lmstudio_status": {
+          "infinity_status": {
             "anyOf": [
               {
                 "type": "string"
@@ -1872,9 +2877,9 @@
                 "type": "null"
               }
             ],
-            "title": "Lmstudio Status"
+            "title": "Infinity Status"
           },
-          "lmstudio_error": {
+          "infinity_error": {
             "anyOf": [
               {
                 "type": "string"
@@ -1883,29 +2888,7 @@
                 "type": "null"
               }
             ],
-            "title": "Lmstudio Error"
-          },
-          "fusion_status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Fusion Status"
-          },
-          "fusion_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Fusion Error"
+            "title": "Infinity Error"
           },
           "chunk_count": {
             "type": "integer",

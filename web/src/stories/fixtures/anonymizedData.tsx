@@ -13,8 +13,7 @@ export const anonymizedDocuments: DocumentSummary[] = [
     extension: '.pdf',
     file_hash: anonymizedFileHash,
     filename: 'sample-research-brief.pdf',
-    fusion_status: 'ok',
-    lmstudio_status: 'error',
+    infinity_status: 'error',
     mineru_status: 'ok',
     modified_at: '2026-01-03T15:30:00Z',
     path: 'C:\\Sample\\Corpus\\sample-research-brief.pdf',
@@ -28,7 +27,7 @@ export const anonymizedDocuments: DocumentSummary[] = [
     extension: '.png',
     file_hash: 'anon-file-0002',
     filename: 'invoice-example.png',
-    fusion_status: 'ok',
+    infinity_status: 'ok',
     mineru_status: 'ok',
     modified_at: '2026-01-04T09:10:00Z',
     path: 'C:\\Sample\\Corpus\\invoice-example.png',
@@ -38,9 +37,9 @@ export const anonymizedDocuments: DocumentSummary[] = [
 ];
 
 export const mockOverlay: OverlayBox = {
-  annotation_engine: 'fusion',
-  annotation_model: 'trapo-region-fusion-v1',
-  annotation_provider: 'local-fusion',
+  annotation_engine: 'infinity',
+  annotation_model: 'sample-parser-model',
+  annotation_provider: 'local-infinity-parser2',
   bbox: { height_pct: 10.4, left_pct: 18.2, top_pct: 22.6, width_pct: 54.8 },
   chunk_id: 104,
   chunk_index: 7,
@@ -51,7 +50,7 @@ export const mockOverlay: OverlayBox = {
   page_no: 2,
   raw_bbox: { bottom: 676, coord_origin: 'BOTTOMLEFT', left: 112, right: 488, top: 598 },
   region_kind: 'text',
-  source_ref: 'docling:r-17 + mineru:r-22',
+  source_ref: 'infinity:r-17',
   style: {
     fill_color: '#3994bc',
     fill_opacity: 0.14,
@@ -69,14 +68,6 @@ export const markdownEngines: MarkdownEngineRecord[] = [
     markdown_engine: 'best_available_markdown',
     page_count: 12,
     status: 'ok',
-  },
-  {
-    label: 'LM Studio',
-    markdown_engine: 'lmstudio_markdown',
-    markdown_model: 'example-vision-model',
-    markdown_provider: 'local-lmstudio',
-    page_count: 3,
-    status: 'error',
   },
   {
     label: 'Infinity Parser2',
@@ -123,7 +114,7 @@ export const treeGridNodes: TreeGridNode[] = [
     badge: 'visible',
     checked: true,
     children: [
-      { badge: '318', checked: true, id: 'engine:fusion', label: 'Fusion overlays' },
+      { badge: '318', checked: true, id: 'engine:infinity', label: 'Infinity overlays' },
       { badge: '142', checked: 'indeterminate', id: 'engine:docling', label: 'Docling overlays' },
     ],
     id: 'overlays',
@@ -148,7 +139,7 @@ export interface ExampleRow {
 export const tableRows: ExampleRow[] = [
   { duration: '37.7s', engine: 'Docling', id: 'r1', name: 'Read source', status: 'ok' },
   { duration: '9.1s', engine: 'Preview', id: 'r2', name: 'Render pages', status: 'ok' },
-  { duration: '61.0s', engine: 'LM Studio', id: 'r3', name: 'Page Markdown', status: 'error' },
+  { duration: '61.0s', engine: 'Infinity', id: 'r3', name: 'Page Markdown', status: 'error' },
 ];
 
 export const tableColumns: Array<ColumnDef<ExampleRow>> = [

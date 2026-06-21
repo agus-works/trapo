@@ -1,0 +1,62 @@
+.shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--background);
+}
+
+.tabBar {
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.content {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.runBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.runBar select {
+  min-width: min(520px, 58vw);
+  border: 1px solid var(--input-border);
+  border-radius: 0;
+  padding: 4px 8px;
+  background: var(--input-background);
+  color: var(--foreground);
+}
+
+.runBarSummary {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .runBar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .runBar select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .runBarSummary {
+    margin-left: 0;
+  }
+}

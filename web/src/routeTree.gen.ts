@@ -12,6 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DiagnosticsIndexRouteImport } from './routes/diagnostics.index'
+import { Route as DiagnosticsWaterfallRouteImport } from './routes/diagnostics.waterfall'
+import { Route as DiagnosticsProgressRouteImport } from './routes/diagnostics.progress'
+import { Route as DiagnosticsPerformanceRouteImport } from './routes/diagnostics.performance'
+import { Route as DiagnosticsModelsRouteImport } from './routes/diagnostics.models'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -28,34 +33,97 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DiagnosticsIndexRoute = DiagnosticsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DiagnosticsRoute,
+} as any)
+const DiagnosticsWaterfallRoute = DiagnosticsWaterfallRouteImport.update({
+  id: '/waterfall',
+  path: '/waterfall',
+  getParentRoute: () => DiagnosticsRoute,
+} as any)
+const DiagnosticsProgressRoute = DiagnosticsProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
+  getParentRoute: () => DiagnosticsRoute,
+} as any)
+const DiagnosticsPerformanceRoute = DiagnosticsPerformanceRouteImport.update({
+  id: '/performance',
+  path: '/performance',
+  getParentRoute: () => DiagnosticsRoute,
+} as any)
+const DiagnosticsModelsRoute = DiagnosticsModelsRouteImport.update({
+  id: '/models',
+  path: '/models',
+  getParentRoute: () => DiagnosticsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/diagnostics': typeof DiagnosticsRoute
+  '/diagnostics': typeof DiagnosticsRouteWithChildren
   '/settings': typeof SettingsRoute
+  '/diagnostics/models': typeof DiagnosticsModelsRoute
+  '/diagnostics/performance': typeof DiagnosticsPerformanceRoute
+  '/diagnostics/progress': typeof DiagnosticsProgressRoute
+  '/diagnostics/waterfall': typeof DiagnosticsWaterfallRoute
+  '/diagnostics/': typeof DiagnosticsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/diagnostics': typeof DiagnosticsRoute
   '/settings': typeof SettingsRoute
+  '/diagnostics/models': typeof DiagnosticsModelsRoute
+  '/diagnostics/performance': typeof DiagnosticsPerformanceRoute
+  '/diagnostics/progress': typeof DiagnosticsProgressRoute
+  '/diagnostics/waterfall': typeof DiagnosticsWaterfallRoute
+  '/diagnostics': typeof DiagnosticsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/diagnostics': typeof DiagnosticsRoute
+  '/diagnostics': typeof DiagnosticsRouteWithChildren
   '/settings': typeof SettingsRoute
+  '/diagnostics/models': typeof DiagnosticsModelsRoute
+  '/diagnostics/performance': typeof DiagnosticsPerformanceRoute
+  '/diagnostics/progress': typeof DiagnosticsProgressRoute
+  '/diagnostics/waterfall': typeof DiagnosticsWaterfallRoute
+  '/diagnostics/': typeof DiagnosticsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/diagnostics' | '/settings'
+  fullPaths:
+    | '/'
+    | '/diagnostics'
+    | '/settings'
+    | '/diagnostics/models'
+    | '/diagnostics/performance'
+    | '/diagnostics/progress'
+    | '/diagnostics/waterfall'
+    | '/diagnostics/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/diagnostics' | '/settings'
-  id: '__root__' | '/' | '/diagnostics' | '/settings'
+  to:
+    | '/'
+    | '/settings'
+    | '/diagnostics/models'
+    | '/diagnostics/performance'
+    | '/diagnostics/progress'
+    | '/diagnostics/waterfall'
+    | '/diagnostics'
+  id:
+    | '__root__'
+    | '/'
+    | '/diagnostics'
+    | '/settings'
+    | '/diagnostics/models'
+    | '/diagnostics/performance'
+    | '/diagnostics/progress'
+    | '/diagnostics/waterfall'
+    | '/diagnostics/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DiagnosticsRoute: typeof DiagnosticsRoute
+  DiagnosticsRoute: typeof DiagnosticsRouteWithChildren
   SettingsRoute: typeof SettingsRoute
 }
 
@@ -82,12 +150,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/diagnostics/': {
+      id: '/diagnostics/'
+      path: '/'
+      fullPath: '/diagnostics/'
+      preLoaderRoute: typeof DiagnosticsIndexRouteImport
+      parentRoute: typeof DiagnosticsRoute
+    }
+    '/diagnostics/waterfall': {
+      id: '/diagnostics/waterfall'
+      path: '/waterfall'
+      fullPath: '/diagnostics/waterfall'
+      preLoaderRoute: typeof DiagnosticsWaterfallRouteImport
+      parentRoute: typeof DiagnosticsRoute
+    }
+    '/diagnostics/progress': {
+      id: '/diagnostics/progress'
+      path: '/progress'
+      fullPath: '/diagnostics/progress'
+      preLoaderRoute: typeof DiagnosticsProgressRouteImport
+      parentRoute: typeof DiagnosticsRoute
+    }
+    '/diagnostics/performance': {
+      id: '/diagnostics/performance'
+      path: '/performance'
+      fullPath: '/diagnostics/performance'
+      preLoaderRoute: typeof DiagnosticsPerformanceRouteImport
+      parentRoute: typeof DiagnosticsRoute
+    }
+    '/diagnostics/models': {
+      id: '/diagnostics/models'
+      path: '/models'
+      fullPath: '/diagnostics/models'
+      preLoaderRoute: typeof DiagnosticsModelsRouteImport
+      parentRoute: typeof DiagnosticsRoute
+    }
   }
 }
 
+interface DiagnosticsRouteChildren {
+  DiagnosticsModelsRoute: typeof DiagnosticsModelsRoute
+  DiagnosticsPerformanceRoute: typeof DiagnosticsPerformanceRoute
+  DiagnosticsProgressRoute: typeof DiagnosticsProgressRoute
+  DiagnosticsWaterfallRoute: typeof DiagnosticsWaterfallRoute
+  DiagnosticsIndexRoute: typeof DiagnosticsIndexRoute
+}
+
+const DiagnosticsRouteChildren: DiagnosticsRouteChildren = {
+  DiagnosticsModelsRoute: DiagnosticsModelsRoute,
+  DiagnosticsPerformanceRoute: DiagnosticsPerformanceRoute,
+  DiagnosticsProgressRoute: DiagnosticsProgressRoute,
+  DiagnosticsWaterfallRoute: DiagnosticsWaterfallRoute,
+  DiagnosticsIndexRoute: DiagnosticsIndexRoute,
+}
+
+const DiagnosticsRouteWithChildren = DiagnosticsRoute._addFileChildren(
+  DiagnosticsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DiagnosticsRoute: DiagnosticsRoute,
+  DiagnosticsRoute: DiagnosticsRouteWithChildren,
   SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport

@@ -8,7 +8,6 @@ from typing import Any
 from trapo.db import DuckConnection
 from trapo.document_markdown import (
     INFINITY_MARKDOWN_ENGINE,
-    LMSTUDIO_MARKDOWN_ENGINE,
     MarkdownGeneratorRecord,
     PageMarkdown,
     is_usable_markdown_text,
@@ -22,11 +21,8 @@ from trapo.ingest.infinity_models import (
 )
 from trapo.ingest.infinity_reader import read_page_markdown_with_infinity
 from trapo.ingest.lmstudio_context import LmStudioContextInfo
-from trapo.ingest.lmstudio_context import resolve_markdown_max_tokens
 from trapo.ingest.lmstudio_lifecycle import lmstudio_model_lease
-from trapo.ingest.lmstudio_models import LmStudioMarkdownOptions
 from trapo.ingest.markdown_engines import requested_markdown_engines
-from trapo.ingest.markdown_reader import read_markdown_with_lmstudio
 from trapo.ingest.markitdown_markdown import (
     markitdown_identity,
     process_markitdown_markdown,
@@ -59,9 +55,12 @@ def process_page_markdown(  # noqa: PLR0913
     options: IngestOptions,
     log: Callable[[str], None],
     context_info: LmStudioContextInfo | None = None,
+    *,
+    markdown_engines: list[str] | None = None,
+    lease_lmstudio: bool = True,
 ) -> PageMarkdownSummary:
     engine_summaries: list[PageMarkdownSummary] = []
-    for markdown_engine in requested_markdown_engines(options):
+    for markdown_engine in markdown_engines or requested_markdown_engines(options):
         engine_summary = _process_markdown_engine(
             connection,
             path,
@@ -71,6 +70,7 @@ def process_page_markdown(  # noqa: PLR0913
             log,
             markdown_engine,
             context_info,
+            lease_lmstudio,
         )
         engine_summaries.append(engine_summary)
     return _combine_page_markdown_summaries(engine_summaries)
@@ -103,6 +103,7 @@ def _process_markdown_engine(  # noqa: PLR0913
     log: Callable[[str], None],
     markdown_engine: str,
     context_info: LmStudioContextInfo | None = None,
+    lease_lmstudio: bool = True,
 ) -> PageMarkdownSummary:
     pages = target_pages_for_regions(connection, path, file_hash) or []
     expected_pages = [page.page_no for page in pages]
@@ -130,6 +131,7 @@ def _process_markdown_engine(  # noqa: PLR0913
             pages,
             expected_pages,
             context_info,
+            lease_lmstudio,
         )
     return summary
 
@@ -145,38 +147,9 @@ def _generate_markdown_engine(  # noqa: PLR0911, PLR0913
     pages: list[PageInfo],
     expected_pages: list[int],
     context_info: LmStudioContextInfo | None = None,
+    lease_lmstudio: bool = True,
 ) -> PageMarkdownSummary:
     try:
-        if markdown_engine == LMSTUDIO_MARKDOWN_ENGINE:
-            markdown_summary = _process_lmstudio_markdown(
-                connection,
-                path,
-                file_hash,
-                options,
-                log,
-                pages,
-                context_info,
-            )
-            error_count = markdown_summary.error_count
-            record_markdown_generator(
-                connection,
-                MarkdownGeneratorRecord(
-                    file_hash=file_hash,
-                    ingest_run_id=run_id,
-                    markdown_engine=markdown_engine,
-                    markdown_provider="local-lmstudio",
-                    markdown_model=options.lmstudio_model,
-                    status="ok" if error_count == 0 else "partial",
-                    page_count=markdown_summary.page_count,
-                    error=f"{error_count} page(s) failed" if error_count else None,
-                    metadata={
-                        "expected_pages": expected_pages,
-                        "error_count": error_count,
-                        "errors": markdown_summary.errors or [],
-                    },
-                ),
-            )
-            return markdown_summary
         if markdown_engine == INFINITY_MARKDOWN_ENGINE:
             infinity_options = InfinityOptions(
                 model=options.infinity_model,
@@ -191,6 +164,7 @@ def _generate_markdown_engine(  # noqa: PLR0911, PLR0913
                 file_hash,
                 options,
                 log,
+                lease_lmstudio=lease_lmstudio,
             )
             error_count = markdown_summary.error_count
             record_markdown_generator(
@@ -287,6 +261,8 @@ def _process_infinity_markdown(  # noqa: PLR0913
     file_hash: str,
     options: IngestOptions,
     log: Callable[[str], None],
+    *,
+    lease_lmstudio: bool = True,
 ) -> PageMarkdownSummary:
     log(
         "Generating page Markdown with Infinity Parser2: "
@@ -326,8 +302,9 @@ def _process_infinity_markdown(  # noqa: PLR0913
         page_images = list(
             iter_markdown_page_images(path, options=render_options, log=log)
         )
-        if infinity_options.backend == "lmstudio":
+        if infinity_options.backend == "lmstudio" and lease_lmstudio:
             with lmstudio_model_lease(
+                base_url=options.lmstudio_base_url,
                 model=resolved_model,
                 timeout_seconds=min(options.lmstudio_timeout_seconds, 60.0),
                 enabled=options.lmstudio_maximize_context,
@@ -407,102 +384,12 @@ def _process_infinity_markdown(  # noqa: PLR0913
     )
 
 
-def _process_lmstudio_markdown(  # noqa: PLR0913
-    connection: DuckConnection,
-    path: Path,
-    file_hash: str,
-    options: IngestOptions,
-    log: Callable[[str], None],
-    target_pages: list[PageInfo],
-    context_info: LmStudioContextInfo | None = None,
-) -> PageMarkdownSummary:
-    markdown_max_tokens = resolve_markdown_max_tokens(
-        requested_tokens=options.page_markdown_max_tokens,
-        context_info=context_info,
-    )
-    if markdown_max_tokens != options.page_markdown_max_tokens:
-        context_tokens = context_info.effective_context_tokens if context_info else None
-        log(
-            "Resolved LM Studio markdown max tokens from context: "
-            f"requested={options.page_markdown_max_tokens} resolved={markdown_max_tokens} "
-            f"context_tokens={context_tokens}"
-        )
-    log(
-        f"Generating page Markdown with LM Studio: {path} model={options.lmstudio_model}"
-    )
-    markdown_options = LmStudioMarkdownOptions(
-        base_url=options.lmstudio_base_url,
-        model=options.lmstudio_model,
-        timeout_seconds=options.lmstudio_timeout_seconds,
-        render_dpi=options.page_markdown_render_dpi,
-        image_max_side=options.page_markdown_image_max_side,
-        image_format=options.page_markdown_image_format,
-        jpeg_quality=options.page_markdown_jpeg_quality,
-        cache_enabled=options.page_markdown_cache,
-        cache_root=options.page_markdown_cache_root,
-        markdown_max_tokens=markdown_max_tokens,
-        image_rotation_degrees_by_page=image_rotation_degrees_by_page(target_pages),
-        markdown_engine=LMSTUDIO_MARKDOWN_ENGINE,
-    )
-    with traced_span(
-        "trapo.ingest.page_markdown",
-        attributes={
-            "file.hash": file_hash,
-            "lmstudio.model": options.lmstudio_model,
-            "lmstudio.base_url": options.lmstudio_base_url,
-            "markdown.render_dpi": options.page_markdown_render_dpi,
-            "markdown.image_max_side": options.page_markdown_image_max_side,
-            "markdown.image_format": options.page_markdown_image_format,
-            "markdown.jpeg_quality": options.page_markdown_jpeg_quality,
-            "markdown.cache_enabled": options.page_markdown_cache,
-            "markdown.engine": LMSTUDIO_MARKDOWN_ENGINE,
-        },
-    ) as markdown_span:
-
-        def persist_page(page: PageMarkdown) -> None:
-            upsert_page_markdown(connection, page)
-
-        with lmstudio_model_lease(
-            base_url=options.lmstudio_base_url,
-            model=options.lmstudio_model,
-            timeout_seconds=min(options.lmstudio_timeout_seconds, 60.0),
-            enabled=options.lmstudio_maximize_context,
-            log=log,
-        ):
-            result = read_markdown_with_lmstudio(
-                path,
-                file_hash=file_hash,
-                options=markdown_options,
-                evidence_by_page={},
-                log=log,
-                on_plain_page=persist_page,
-                on_page=persist_page,
-            )
-        span_set_attributes(
-            markdown_span,
-            {
-                "markdown.page_count": len(result.pages),
-                "markdown.error_count": len(result.errors),
-            },
-        )
-    log(
-        "Stored page Markdown: "
-        f"pages={len(result.pages)} page_errors={len(result.errors)}"
-    )
-    return PageMarkdownSummary(
-        page_count=len(result.pages),
-        error_count=len(result.errors),
-        errors=result.errors,
-    )
-
-
 def pending_page_markdown(  # noqa: PLR0913
     connection: DuckConnection,
     path: Path,
     file_hash: str,
     *,
     pending_engines: list[str],
-    fusion_pending: bool,
     options: IngestOptions,
 ) -> bool:
     if not options.page_markdown:
@@ -513,7 +400,6 @@ def pending_page_markdown(  # noqa: PLR0913
     return (
         options.reprocess
         or bool(pending_engines)
-        or fusion_pending
         or any(
             not markdown_complete(
                 connection,
@@ -527,8 +413,6 @@ def pending_page_markdown(  # noqa: PLR0913
 
 
 def _markdown_identity(markdown_engine: str, options: IngestOptions) -> tuple[str, str]:
-    if markdown_engine == LMSTUDIO_MARKDOWN_ENGINE:
-        return "local-lmstudio", options.lmstudio_model
     if markdown_engine == INFINITY_MARKDOWN_ENGINE:
         return INFINITY_PROVIDER, options.infinity_model
     return markitdown_identity(markdown_engine)

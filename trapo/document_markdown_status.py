@@ -91,11 +91,13 @@ def _stored_markdown_page_counts(
 ) -> dict[str, int]:
     if not table_exists(connection, "document_page_markdown"):
         return {}
+    active_engines = ", ".join(f"'{engine}'" for engine in MARKDOWN_ENGINE_PRIORITY)
     rows = connection.execute(
-        """
+        f"""
         SELECT markdown_engine, count(*)
         FROM document_page_markdown
         WHERE file_hash = ?
+          AND markdown_engine IN ({active_engines})
         GROUP BY markdown_engine
         """,
         [file_hash],
@@ -109,13 +111,15 @@ def _stored_markdown_engine_statuses(
 ) -> dict[str, MarkdownEngineStatus]:
     if not table_exists(connection, "document_markdown_generators"):
         return {}
+    active_engines = ", ".join(f"'{engine}'" for engine in MARKDOWN_ENGINE_PRIORITY)
     rows = connection.execute(
-        """
+        f"""
         SELECT
             markdown_engine, markdown_provider, markdown_model, status, error,
             page_count, metadata_json
         FROM document_markdown_generators
         WHERE file_hash = ?
+          AND markdown_engine IN ({active_engines})
         """,
         [file_hash],
     ).fetchall()

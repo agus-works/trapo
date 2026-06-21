@@ -60,13 +60,18 @@ export function fileTypeLabel(document: DocumentSummary): string {
 }
 
 export function ocrStatus(document: DocumentSummary): string {
-  if (document.fusion_status === 'ok') {
-    return 'Fusion ready';
-  }
-  if (document.docling_status === 'ok' || document.mineru_status === 'ok') {
+  if (
+    document.docling_status === 'ok' ||
+    document.mineru_status === 'ok' ||
+    document.infinity_status === 'ok'
+  ) {
     return 'OCR ready';
   }
-  if (document.docling_status === 'error' || document.mineru_status === 'error') {
+  if (
+    document.docling_status === 'error' ||
+    document.mineru_status === 'error' ||
+    document.infinity_status === 'error'
+  ) {
     return 'OCR error';
   }
   return 'Pending';

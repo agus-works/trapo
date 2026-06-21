@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from trapo.annotation_engines import ACTIVE_REGION_ENGINE_SQL_LIST
 from trapo.db import DuckConnection, table_exists
+from trapo.document_markdown_models import MARKDOWN_ENGINE_PRIORITY
 from trapo.search_models import (
     DocumentRegionResultInput,
     GlobalSearchResult,
@@ -21,7 +23,7 @@ def search_document_regions_scan(
     if not table_exists(connection, "document_regions"):
         return []
     rows = connection.execute(
-        """
+        f"""
         SELECT
             r.region_id,
             r.file_hash,
@@ -40,6 +42,7 @@ def search_document_regions_scan(
             coalesce(r.label, '') || ' ' ||
             coalesce(r.source_ref, '')
         ) LIKE ?
+          AND coalesce(r.annotation_engine, 'docling') IN ({ACTIVE_REGION_ENGINE_SQL_LIST})
         ORDER BY r.updated_at DESC, r.created_at DESC, r.region_id
         LIMIT ?
         """,
@@ -76,8 +79,9 @@ def search_page_markdown_scan(
 ) -> list[GlobalSearchResult]:
     if not table_exists(connection, "document_page_markdown"):
         return []
+    active_engines = ", ".join(f"'{engine}'" for engine in MARKDOWN_ENGINE_PRIORITY)
     rows = connection.execute(
-        """
+        f"""
         SELECT
             m.file_hash,
             coalesce(f.filename, m.file_hash) AS filename,
@@ -89,6 +93,7 @@ def search_page_markdown_scan(
         FROM document_page_markdown m
         LEFT JOIN files f ON f.file_hash = m.file_hash
         WHERE lower(m.markdown_text) LIKE ?
+          AND m.markdown_engine IN ({active_engines})
         ORDER BY m.updated_at DESC, m.file_hash, m.page_no
         LIMIT ?
         """,

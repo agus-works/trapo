@@ -14,10 +14,10 @@ from trapo.db import connect
 from trapo.migrations import apply_migrations
 
 
-LMSTUDIO_ELAPSED_SECONDS = 1.5
+INFINITY_ELAPSED_SECONDS = 1.5
 
 
-def test_read_annotation_comparison_report_summarizes_profiles_and_fusion(
+def test_read_annotation_comparison_report_summarizes_active_engines(
     tmp_path,
 ) -> None:
     db_path = tmp_path / "trapo.duckdb"
@@ -31,18 +31,16 @@ def test_read_annotation_comparison_report_summarizes_profiles_and_fusion(
 
     assert report.filename == "sample.pdf"
     by_engine = {engine.annotation_engine: engine for engine in report.engines}
-    assert by_engine["lmstudio"].status == "ok"
-    assert by_engine["lmstudio"].profile_name == "balanced"
-    assert by_engine["lmstudio"].page_count == 1
-    assert by_engine["lmstudio"].elapsed_seconds == LMSTUDIO_ELAPSED_SECONDS
-    assert by_engine["lmstudio_strict"].region_count == 1
-    assert by_engine["fusion"].agreement_summary["single_engine_region_count"] == 1
+    assert sorted(by_engine) == ["docling", "infinity", "mineru"]
+    assert by_engine["infinity"].status == "ok"
+    assert by_engine["infinity"].page_count == 1
+    assert by_engine["infinity"].elapsed_seconds == INFINITY_ELAPSED_SECONDS
+    assert by_engine["mineru"].region_count == 1
 
     formatted = format_annotation_comparison_report(report)
     assert "Annotation report: file_hash=file-1 filename=sample.pdf" in formatted
-    assert "lmstudio_strict\tok\t1\t1" in formatted
-    assert "fusion\tok\t1\t1" in formatted
-    assert "all=0,multi=1,single=1" in formatted
+    assert "infinity\tok\t2\t1" in formatted
+    assert "mineru\tok\t1\t1" in formatted
 
 
 def test_annotation_report_cli_prints_comparison(tmp_path) -> None:
@@ -58,9 +56,9 @@ def test_annotation_report_cli_prints_comparison(tmp_path) -> None:
 
     assert result.exit_code == 0, result.output
     assert "engine\tstatus\tregions\tpages" in result.output
-    assert "lmstudio\tok\t2\t1" in result.output
-    assert "lmstudio_strict\tok\t1\t1" in result.output
-    assert "fusion\tok\t1\t1" in result.output
+    assert "docling\tok\t1\t1" in result.output
+    assert "infinity\tok\t2\t1" in result.output
+    assert "mineru\tok\t1\t1" in result.output
 
 
 def _seed_report_rows(connection) -> None:
@@ -75,39 +73,30 @@ def _seed_report_rows(connection) -> None:
     )
     _insert_ocr(
         connection,
-        "lmstudio",
+        "infinity",
         text="one two",
         output_json={
-            "prompt_profile": "balanced",
-            "pages": [{"page_no": 1, "elapsed_seconds": LMSTUDIO_ELAPSED_SECONDS}],
+            "pages": [{"page_no": 1, "elapsed_seconds": INFINITY_ELAPSED_SECONDS}],
         },
     )
     _insert_ocr(
         connection,
-        "lmstudio_strict",
+        "mineru",
         text="one",
         output_json={
-            "prompt_profile": "strict",
             "pages": [{"page_no": 1, "elapsed_seconds": 2.0}],
         },
     )
     _insert_ocr(
         connection,
-        "fusion",
+        "docling",
         text="one",
-        output_json={
-            "profile": {"name": "balanced"},
-            "agreement_summary": {
-                "all_source_engines_region_count": 0,
-                "multi_engine_region_count": 1,
-                "single_engine_region_count": 1,
-            },
-        },
+        output_json={"pages": [{"page_no": 1}]},
     )
-    _insert_region(connection, "lmstudio-a", "lmstudio")
-    _insert_region(connection, "lmstudio-b", "lmstudio")
-    _insert_region(connection, "lmstudio-strict-a", "lmstudio_strict")
-    _insert_region(connection, "fusion-a", "fusion")
+    _insert_region(connection, "infinity-a", "infinity")
+    _insert_region(connection, "infinity-b", "infinity")
+    _insert_region(connection, "mineru-a", "mineru")
+    _insert_region(connection, "docling-a", "docling")
 
 
 def _insert_ocr(

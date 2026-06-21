@@ -110,6 +110,20 @@ def rebuild_infinity_document_regions(  # noqa: PLR0913
     return len(rows)
 
 
+def extract_infinity_pages(infinity_output_json: object) -> list[PageInfo]:
+    data = parse_json_value(infinity_output_json)
+    pages = data.get("pages")
+    if not isinstance(pages, list):
+        return []
+    result: list[PageInfo] = []
+    for page_index, page in enumerate(pages, start=1):
+        if isinstance(page, dict):
+            page_info = _page_info(page, page_index)
+            if page_info is not None:
+                result.append(page_info)
+    return result
+
+
 def _infinity_regions(data: dict[str, Any]) -> list[InfinityRegion]:
     pages = data.get("pages")
     if not isinstance(pages, list):

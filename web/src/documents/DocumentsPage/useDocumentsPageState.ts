@@ -48,11 +48,6 @@ const DEFAULT_MARKDOWN_ENGINES: MarkdownEngineRecord[] = [
     page_count: 0,
   },
   {
-    label: 'LM Studio',
-    markdown_engine: 'lmstudio_markdown',
-    page_count: 0,
-  },
-  {
     label: 'Infinity Parser2',
     markdown_engine: 'infinity_markdown',
     page_count: 0,

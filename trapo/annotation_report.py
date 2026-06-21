@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from trapo.annotation_engines import ACTIVE_REGION_ENGINE_SQL_LIST
 from trapo.db import DuckConnection, table_exists
 from trapo.server.provenance import parse_json_value
 
@@ -109,10 +110,11 @@ def _ocr_rows(
     if not table_exists(connection, "ocr_documents"):
         return {}
     rows = connection.execute(
-        """
+        f"""
         SELECT annotation_engine, status, error, reader_provider, reader_model, text, output_json
         FROM ocr_documents
         WHERE file_hash = ?
+          AND annotation_engine IN ({ACTIVE_REGION_ENGINE_SQL_LIST})
         ORDER BY annotation_engine
         """,
         [file_hash],
@@ -136,10 +138,11 @@ def _region_stats(
     if not table_exists(connection, "document_regions"):
         return {}
     rows = connection.execute(
-        """
+        f"""
         SELECT annotation_engine, count(*), count(DISTINCT page_no)
         FROM document_regions
         WHERE file_hash = ?
+          AND coalesce(annotation_engine, 'docling') IN ({ACTIVE_REGION_ENGINE_SQL_LIST})
         GROUP BY annotation_engine
         ORDER BY annotation_engine
         """,

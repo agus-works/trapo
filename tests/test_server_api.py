@@ -185,13 +185,13 @@ def test_documents_and_regions_api_expose_docling_overlays(tmp_path) -> None:
     assert "fact_ids" not in overlay
 
 
-def test_document_detail_uses_alternate_lmstudio_profile_pages(tmp_path) -> None:
+def test_document_detail_uses_infinity_pages(tmp_path) -> None:
     db_path = tmp_path / "trapo.duckdb"
     pdf_path = tmp_path / "strict.pdf"
     pdf_path.write_bytes(b"%PDF-1.4\n% test pdf\n%%EOF\n")
     config = RuntimeConfig.from_env(db_path=str(db_path))
-    lmstudio_output = {
-        "engine": "lmstudio_strict",
+    infinity_output = {
+        "engine": "infinity",
         "pages": [{"page_no": 1, "width": 300.0, "height": 400.0, "regions": []}],
     }
 
@@ -219,18 +219,18 @@ def test_document_detail_uses_alternate_lmstudio_profile_pages(tmp_path) -> None
                 reader_provider, reader_model, metadata_json
             )
             VALUES (
-                'strict-hash', 'lmstudio_strict', 3, '', ?::JSON, 'ok',
-                'local-lmstudio', 'test-model', '{}'::JSON
+                'strict-hash', 'infinity', 3, '', ?::JSON, 'ok',
+                'local-infinity-parser2', 'infinity-parser2-flash', '{}'::JSON
             )
             """,
-            [json.dumps(lmstudio_output)],
+            [json.dumps(infinity_output)],
         )
 
     client = TestClient(create_app(db_path))
 
     documents_response = client.get("/api/documents")
     assert documents_response.status_code == HTTP_OK
-    assert documents_response.json()[0]["lmstudio_status"] == "ok"
+    assert documents_response.json()[0]["infinity_status"] == "ok"
     detail_response = client.get("/api/documents/strict-hash")
     assert detail_response.status_code == HTTP_OK
     assert detail_response.json()["pages"] == [
@@ -432,7 +432,6 @@ def test_document_markdown_api_best_available_uses_markitdown_backup(
     )
     assert [engine["markdown_engine"] for engine in payload["available_engines"]] == [
         BEST_AVAILABLE_MARKDOWN_ENGINE,
-        "lmstudio_markdown",
         "infinity_markdown",
         MARKITDOWN_MARKDOWN_ENGINE,
         "markitdown_cu",
@@ -655,20 +654,8 @@ def test_documents_api_exposes_ocr_errors(tmp_path) -> None:
                 reader_provider, reader_model
             )
             VALUES (
-                'hash1', 'fusion', 1, 'error', 'Fusion had no page geometry',
-                'trapo', 'trapo-region-fusion-v1'
-            )
-            """
-        )
-        connection.execute(
-            """
-            INSERT INTO ocr_documents (
-                file_hash, annotation_engine, ingest_run_id, status, error,
-                reader_provider, reader_model
-            )
-            VALUES (
-                'hash1', 'lmstudio', 1, 'error', 'LM Studio server is not running',
-                'local-lmstudio', 'google/gemma-4-26b-a4b-qat'
+                'hash1', 'infinity', 1, 'error', 'Infinity backend failed',
+                'local-infinity-parser2', 'infinity-parser2-flash'
             )
             """
         )
@@ -678,18 +665,18 @@ def test_documents_api_exposes_ocr_errors(tmp_path) -> None:
     summary = client.get("/api/documents").json()[0]
     assert summary["mineru_status"] == "error"
     assert summary["mineru_error"] == "MinerU import failed"
-    assert summary["lmstudio_status"] == "error"
-    assert summary["lmstudio_error"] == "LM Studio server is not running"
-    assert summary["fusion_status"] == "error"
-    assert summary["fusion_error"] == "Fusion had no page geometry"
+    assert summary["infinity_status"] == "error"
+    assert summary["infinity_error"] == "Infinity backend failed"
+    assert "lmstudio_status" not in summary
+    assert "fusion_status" not in summary
 
     payload = client.get("/api/documents/hash1/regions").json()
     assert payload["document"]["mineru_status"] == "error"
     assert payload["document"]["mineru_error"] == "MinerU import failed"
-    assert payload["document"]["lmstudio_status"] == "error"
-    assert payload["document"]["lmstudio_error"] == "LM Studio server is not running"
-    assert payload["document"]["fusion_status"] == "error"
-    assert payload["document"]["fusion_error"] == "Fusion had no page geometry"
+    assert payload["document"]["infinity_status"] == "error"
+    assert payload["document"]["infinity_error"] == "Infinity backend failed"
+    assert "lmstudio_status" not in payload["document"]
+    assert "fusion_status" not in payload["document"]
 
 
 def test_document_pdf_api_streams_pdf_with_mime_type(tmp_path) -> None:
@@ -1108,7 +1095,7 @@ def test_regions_api_does_not_double_rotate_mineru_content_bbox_for_exif_images(
     assert mineru_overlay["bbox"]["height_pct"] == approx(40.0)
 
 
-def test_regions_api_does_not_rotate_display_space_engine_boxes_for_exif_images(
+def test_regions_api_ignores_retired_display_space_engines_for_exif_images(
     tmp_path,
 ) -> None:
     db_path = tmp_path / "trapo.duckdb"
@@ -1125,6 +1112,7 @@ def test_regions_api_does_not_rotate_display_space_engine_boxes_for_exif_images(
         for region_id, engine in (
             ("lmstudio-display-box", "lmstudio"),
             ("fusion-display-box", "fusion"),
+            ("infinity-box", "infinity"),
         ):
             connection.execute(
                 """
@@ -1157,19 +1145,12 @@ def test_regions_api_does_not_rotate_display_space_engine_boxes_for_exif_images(
     client = TestClient(create_app(db_path))
     payload = client.get("/api/documents/image-hash/regions").json()
     overlays = {
-        overlay["annotation_engine"]: overlay
-        for overlay in payload["overlays"]
-        if overlay["overlay_id"]
-        in {"region:lmstudio-display-box", "region:fusion-display-box"}
+        overlay["annotation_engine"]: overlay for overlay in payload["overlays"]
     }
 
-    assert overlays["lmstudio"]["bbox"] == {
-        "left_pct": approx(10.0),
-        "top_pct": approx(20.0),
-        "width_pct": approx(40.0),
-        "height_pct": approx(40.0),
-    }
-    assert overlays["fusion"]["bbox"] == overlays["lmstudio"]["bbox"]
+    assert "lmstudio" not in overlays
+    assert "fusion" not in overlays
+    assert overlays["infinity"]["overlay_id"] == "region:infinity-box"
 
 
 def test_status_api_reports_ingest_and_search_counts(tmp_path) -> None:

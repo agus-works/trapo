@@ -1,6 +1,6 @@
 .timelineShell {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   width: 100%;
@@ -9,6 +9,10 @@
     linear-gradient(90deg, color-mix(in srgb, var(--border) 22%, transparent) 1px, transparent 1px)
     0 0 / 96px 100%,
     var(--background);
+}
+
+.timelineShell[data-show-progress="false"] {
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .timelineGroup {
@@ -267,6 +271,26 @@
   display: grid;
   place-items: center;
   gap: 8px;
-  height: 100%;
-  color: var(--muted-foreground);
+  height: calc(100% - 24px);
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.emptyState[data-state="error"] {
+  color: var(--danger);
+}
+
+.stateIconSpin {
+  animation: diagnosticsSpin 0.9s linear infinite;
+}
+
+@keyframes diagnosticsSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }

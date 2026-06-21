@@ -14,7 +14,7 @@ framework contract, import-time performance boundary, or guard-heavy parser.
   wrapper exposes Skylos scan controls as explicit CLI options instead of an
   opaque passthrough string.
 - `trapo/ingest/pipeline.py` `ingest_directory`: `PLR0912` is suppressed while
-  the ingest loop coordinates Docling, MinerU, and LM Studio per-engine failure
+  the ingest loop coordinates Docling, MinerU, and Infinity per-engine failure
   handling. A future engine-dispatch abstraction should remove this exception.
 - `trapo/ingest/pipeline.py` `_process_docling`: `PLR0913` is suppressed because
   the helper keeps the runtime config, run context, file identity, options, and logger

@@ -28,10 +28,7 @@ ENGINE_COLORS = {
     "docling_normalized": "#f07d5f",
     "mineru": "#36cfd1",
     "mineru_normalized": "#43b39f",
-    "lmstudio": "#c490ff",
-    "lmstudio_strict": "#8f86ff",
-    "lmstudio_recall": "#e08bd6",
-    "fusion": "#f1c232",
+    "infinity": "#8f86ff",
 }
 
 KIND_COLORS = {

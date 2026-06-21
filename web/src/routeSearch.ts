@@ -7,12 +7,7 @@ export interface DocumentRouteSearch {
   overlay?: string;
   term?: string;
   highlight?: string;
-  markdown?:
-    | 'best_available_markdown'
-    | 'lmstudio_markdown'
-    | 'infinity_markdown'
-    | 'markitdown'
-    | 'markitdown_cu';
+  markdown?: 'best_available_markdown' | 'infinity_markdown' | 'markitdown' | 'markitdown_cu';
   overlays?: 'all' | 'selected' | 'hidden';
   view?: 'preview' | 'markdown' | 'split';
   explorerView?: 'tiles' | 'details';
@@ -24,10 +19,22 @@ export interface DocumentRouteSearch {
 }
 
 export interface DiagnosticsRouteSearch {
+  engine?: string;
+  expanded?: string;
+  file?: string;
+  focus?: string;
+  group?: 'file' | 'phase' | 'engine' | 'model';
+  metric?: 'duration' | 'waste' | 'throughput';
+  model?: string;
+  page?: number;
+  phase?: string;
   q?: string;
   run?: number;
+  task?: string;
+  unit?: number;
   span?: string;
   status?: 'all' | 'ok' | 'error' | 'skipped';
+  view?: 'file' | 'model' | 'phase';
 }
 
 export function validateDocumentSearch(search: Record<string, unknown>): DocumentRouteSearch {
@@ -54,10 +61,22 @@ export function validateDocumentSearch(search: Record<string, unknown>): Documen
 
 export function validateDiagnosticsSearch(search: Record<string, unknown>): DiagnosticsRouteSearch {
   return {
+    engine: stringValue(search.engine),
+    expanded: stringValue(search.expanded),
+    file: stringValue(search.file),
+    focus: stringValue(search.focus),
+    group: diagnosticsGroupValue(search.group),
+    metric: diagnosticsMetricValue(search.metric),
+    model: stringValue(search.model),
+    page: numberValue(search.page),
+    phase: stringValue(search.phase),
     q: stringValue(search.q),
     run: numberValue(search.run),
+    task: stringValue(search.task),
+    unit: numberValue(search.unit),
     span: stringValue(search.span),
     status: diagnosticStatusValue(search.status),
+    view: diagnosticsViewValue(search.view),
   };
 }
 
@@ -81,15 +100,8 @@ function viewModeValue(value: unknown): 'preview' | 'markdown' | 'split' | undef
 
 function markdownEngineValue(
   value: unknown,
-):
-  | 'best_available_markdown'
-  | 'lmstudio_markdown'
-  | 'infinity_markdown'
-  | 'markitdown'
-  | 'markitdown_cu'
-  | undefined {
+): 'best_available_markdown' | 'infinity_markdown' | 'markitdown' | 'markitdown_cu' | undefined {
   return value === 'best_available_markdown' ||
-    value === 'lmstudio_markdown' ||
     value === 'infinity_markdown' ||
     value === 'markitdown' ||
     value === 'markitdown_cu'
@@ -150,6 +162,20 @@ function diagnosticsModeValue(value: unknown): 'file' | 'page' | undefined {
 
 function diagnosticStatusValue(value: unknown): 'all' | 'ok' | 'error' | 'skipped' | undefined {
   return value === 'all' || value === 'ok' || value === 'error' || value === 'skipped'
+    ? value
+    : undefined;
+}
+
+function diagnosticsViewValue(value: unknown): 'file' | 'model' | 'phase' | undefined {
+  return value === 'file' || value === 'model' || value === 'phase' ? value : undefined;
+}
+
+function diagnosticsMetricValue(value: unknown): 'duration' | 'waste' | 'throughput' | undefined {
+  return value === 'duration' || value === 'waste' || value === 'throughput' ? value : undefined;
+}
+
+function diagnosticsGroupValue(value: unknown): 'file' | 'phase' | 'engine' | 'model' | undefined {
+  return value === 'file' || value === 'phase' || value === 'engine' || value === 'model'
     ? value
     : undefined;
 }

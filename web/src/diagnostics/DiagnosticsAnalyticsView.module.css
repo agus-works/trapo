@@ -1,0 +1,148 @@
+.analyticsShell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--background);
+}
+
+.scroll {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+}
+
+.summaryGrid,
+.reportGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.metric,
+.report,
+.tableSection {
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.metric {
+  padding: 10px;
+}
+
+.metric span,
+.report header span {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.metric strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--foreground);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.report header,
+.tableSection header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  padding: 7px 9px;
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.barRows {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.85fr) minmax(120px, 1fr) 72px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.barRow span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barTrack {
+  height: 8px;
+  background: color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+.barFill {
+  height: 100%;
+  background: #3b82c4;
+}
+
+.recommendations {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.recommendation {
+  border-left: 3px solid var(--border);
+  padding: 8px 10px;
+  background: var(--panel);
+  font-size: 12px;
+}
+
+.recommendation[data-severity="high"] {
+  border-left-color: #c93c37;
+}
+
+.recommendation[data-severity="medium"] {
+  border-left-color: #b9822b;
+}
+
+.recommendation strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.denseTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.denseTable th,
+.denseTable td {
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.denseTable th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.empty {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  color: var(--muted);
+  font-size: 13px;
+}

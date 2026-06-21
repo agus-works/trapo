@@ -174,8 +174,8 @@ def test_global_search_api_returns_page_markdown_matches(tmp_path) -> None:
                 markdown_model, markdown_text, metadata_json
             )
             VALUES (
-                'file-markdown', 4, 'lmstudio_markdown', 'local-lmstudio',
-                'test-model', '# Vendor Notes\n\nMicrosoft renewal terms apply.',
+                'file-markdown', 4, 'infinity_markdown', 'local-infinity-parser2',
+                'infinity-parser2-flash', '# Vendor Notes\n\nMicrosoft renewal terms apply.',
                 '{}'::JSON
             )
             """

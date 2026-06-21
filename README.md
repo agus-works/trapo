@@ -1,15 +1,15 @@
 # Trapo
 
 Trapo ingests documents from a directory with local [Docling](https://github.com/docling-project/docling),
-local [MinerU](https://github.com/opendatalab/MinerU), and an optional local
-LM Studio vision model, stores raw OCR output, deterministic text chunks, page
-regions with bounding boxes, and word-level terms in DuckDB, then serves a
-VS Code-style web UI and a small API for browsing and searching those documents.
+local [MinerU](https://github.com/opendatalab/MinerU), and
+[Infinity Parser2](https://github.com/infiniflow/infinity-parser2), stores raw
+OCR output, deterministic text chunks, page regions with bounding boxes, and
+word-level terms in DuckDB, then serves a VS Code-style web UI and a small API
+for browsing and searching those documents.
 
 Trapo recursively scans files, stores SHA-256 file hashes and metadata, reads
 each file with the requested annotation engines, persists chunks and page
-regions, builds a derived fused-region view, and exposes full-text and
-word-level search over the ingested corpus.
+regions, and exposes full-text and word-level search over the ingested corpus.
 PDF plus PNG, JPEG, BMP, WEBP, TIFF, and GIF image previews can show
 provider-derived region overlays.
 
@@ -17,7 +17,7 @@ provider-derived region overlays.
 
 - `uv`
 - `bun` for the browser frontend
-- LM Studio if using `--annotation-engines lmstudio` or `all`
+- LM Studio only when using `--infinity-backend lmstudio`
 
 On native Windows with Python 3.14.5, the editable local Ray source build needs
 the same toolchain environment that was used for this checkout:
@@ -96,10 +96,8 @@ uv run trapo ingest ./documents --db trapo.duckdb --docling-device cpu --docling
 uv run trapo ingest ./documents --db trapo.duckdb --annotation-engines docling,mineru
 uv run trapo ingest ./documents --db trapo.duckdb --annotation-engines normalized
 uv run trapo ingest ./documents --db trapo.duckdb --annotation-engines all
-uv run trapo ingest ./documents --db trapo.duckdb --annotation-engines all --fusion-profiles all
-uv run trapo ingest ./documents --db trapo.duckdb --annotation-engines lmstudio --lmstudio-model google/gemma-4-26b-a4b-qat
-uv run trapo ingest ./documents --db trapo.duckdb --annotation-engines all --no-fuse-regions
-uv run trapo ingest ./documents --db trapo.duckdb --annotation-engines all --lmstudio-orientation auto
+uv run trapo ingest ./documents --db trapo.duckdb --annotation-engines infinity --page-markdown-engines infinity_markdown
+uv run trapo ingest ./documents --db trapo.duckdb --annotation-engines all --infinity-backend lmstudio --infinity-model infinity-parser2-flash
 uv run trapo ingest ./documents --db trapo.duckdb --annotation-engines docling
 uv run trapo set-page-rotation <file-hash> 90 --page 1 --db trapo.duckdb
 ```
@@ -113,107 +111,69 @@ uv run trapo pipeline read ./documents --db trapo.duckdb --chunker docling-hybri
 Ingestion stores:
 
 - file hash, filename, file metadata, and every observed path;
-- Docling, MinerU, and LM Studio text/structured output linked to the file hash;
+- Docling, MinerU, and Infinity Parser2 text/structured output linked to the file hash;
 - document chunks with Docling chunk metadata in `document_chunks.metadata_json`;
 - persisted provider-aware page regions with bounding boxes (`document_regions`);
 - cached normalized page JPGs and thumbnail variants (`document_preview_images`);
-- deterministic fused regions under `annotation_engine='fusion'`;
 - region-level word terms with bounding boxes (`document_terms`).
 
-Trapo uses Docling for search chunking and can store MinerU annotations for
-comparison. MinerU is invoked through a local import when available; if MinerU is
-not installed in the active Python environment, the MinerU run is recorded as an
-OCR error while Docling can still complete. This checkout uses editable local
-path dependencies for `../MinerU` and `../ray/python`. The local MinerU metadata
-is patched for Python 3.14.5, and the local Ray checkout builds on native
-Windows when Bazel, Git Bash, MSVC, the Windows SDK, and Git's `unzip.exe` are
-available during `uv sync`. The preview surface supports `.png`, `.jpg`,
-`.jpeg`, `.bmp`, `.webp`, `.tif`, `.tiff`, and `.gif` with the same overlay
-coordinate model as PDFs. The HTTP preview image currently serves the first
-image frame; the LM Studio reader still renders every PDF page and every
-Pillow-exposed image frame/page for annotation.
-For image inputs, MinerU converts the image into a generated PDF before OCR;
-Trapo maps MinerU's generated-PDF/content-list coordinates back onto the
-original image preview dimensions before serving overlays.
-Trapo also prefers image preview metadata over engine-reported page sizes for
-raster assets, so EXIF-oriented JPEGs use the same page frame as the browser
-image. Image preview responses are rendered server-side as normalized PNGs for
-the first image frame, which keeps EXIF display orientation consistent across
-browsers and overlay math. Images whose pixels are physically sideways and have
-no EXIF orientation need a separate orientation detector or an explicit rotation
-override. Use `trapo set-page-rotation` to store a manual clockwise rotation;
-the override is applied after EXIF orientation to the preview image, page
-dimensions, Docling/LM Studio boxes, MinerU repaired boxes, and fused overlays.
-When LM Studio is part of the requested engines, `--lmstudio-orientation auto`
-is enabled by default for image inputs. It runs a lightweight orientation
-preflight first and stores high-confidence rotations in the same
-`page_orientation_overrides` table, while leaving manual overrides untouched.
-If the VLM remains uncertain, Trapo can still infer a no-EXIF sideways page from
-Docling's tall vertical text boxes before MinerU, LM Studio region detection,
-and fusion run. Left-side vertical text is corrected with a 270 degree clockwise
-override; right-side vertical text is corrected with a 90 degree clockwise
-override.
+Trapo uses Docling for search chunking and can store MinerU and Infinity
+Parser2 annotations for comparison. MinerU is invoked through a local import
+when available; if MinerU is not installed in the active Python environment, the
+MinerU run is recorded as an OCR error while Docling can still complete. This
+checkout uses editable local path dependencies for `../MinerU` and
+`../ray/python`. The local MinerU metadata is patched for Python 3.14.5, and the
+local Ray checkout builds on native Windows when Bazel, Git Bash, MSVC, the
+Windows SDK, and Git's `unzip.exe` are available during `uv sync`.
+
+The preview surface supports `.png`, `.jpg`, `.jpeg`, `.bmp`, `.webp`, `.tif`,
+`.tiff`, and `.gif` with the same overlay coordinate model as PDFs. For image
+inputs, MinerU converts the image into a generated PDF before OCR; Trapo maps
+MinerU's generated-PDF/content-list coordinates back onto the original image
+preview dimensions before serving overlays. Trapo also prefers image preview
+metadata over engine-reported page sizes for raster assets, so EXIF-oriented
+JPEGs use the same page frame as the browser image. Image preview responses are
+rendered server-side as normalized PNGs for the first image frame, which keeps
+EXIF display orientation consistent across browsers and overlay math.
+
+Images whose pixels are physically sideways and have no EXIF orientation can
+use `trapo set-page-rotation` to store a manual clockwise rotation. Trapo can
+also infer a no-EXIF sideways page from Docling's tall vertical text boxes
+before MinerU and Infinity region rebuilds. Left-side vertical text is corrected
+with a 270 degree clockwise override; right-side vertical text is corrected with
+a 90 degree clockwise override.
 
 The `normalized` annotation-engine alias expands to `docling_normalized` and
 `mineru_normalized`. Those pipelines run Docling and MinerU over cached
 display-oriented JPG pages instead of the source PDF/image. Multipage PDFs and
 Pillow-exposed multipage images are split into one normalized page image per
 reader input, and each reader is called in a batch for the file. The base
-`all` alias intentionally remains `docling,mineru,lmstudio`; request
-`normalized` explicitly when you want cache-backed page-image OCR overlays.
+`all` alias expands to `docling,mineru,infinity`; request `normalized`
+explicitly when you want cache-backed page-image OCR overlays.
 
 The default chunker is `docling-hybrid`, which uses Docling's structure-aware
 chunks. The fallback `chars` chunker is available for debugging.
 
-LM Studio integration is opt-in with `--annotation-engines lmstudio` or `all`.
-Trapo renders each PDF page with PDFium and each TIFF/GIF/WEBP/JPEG/PNG page or
-frame with Pillow, sends one page image per request to LM Studio's
-OpenAI-compatible `/v1/chat/completions` endpoint, and asks the model for strict
-JSON boxes on a `[0,1000]` page grid. With the current Gemma LM Studio setup,
-the observed y-axis convention is bottom-origin, so Trapo defaults
-`--lmstudio-box-origin bottomleft` and converts boxes back to displayed top-left
-coordinates before storing overlays. Existing Docling/MinerU regions are passed
-as compact evidence hints when available, but the page image remains the final
-authority. The default local endpoint is `http://localhost:1234/v1` and the
-default model is `google/gemma-4-26b-a4b-qat`; run the model in LM Studio with
-GPU offload enabled and a `262144` context length so inference uses the RTX GPU.
-Trapo uses one LM Studio context-token default internally and best-effort loads
-that model at its advertised maximum context before ingest, after attempting to
-unload other active LM Studio models. If the LM Studio server is not running,
-Trapo records only the LM Studio engine error and still keeps any Docling/MinerU
-output from the same ingest run. If an individual page request fails, later
-pages continue and the partial failure is recorded. `--lmstudio-timeout`
-controls the per-page read timeout for non-streamed model generation and
-defaults to 900 seconds; connect, write, and pool waits stay short so a missing
-server still fails promptly.
-Run `uv run trapo lmstudio-smoke` to send a synthetic one-page document through
-the same strict JSON bbox path before committing to a full ingest run.
-Use `--lmstudio-profiles all` to run alternative prompt profiles for comparison:
-`balanced` writes `annotation_engine='lmstudio'`, `strict` writes
-`lmstudio_strict`, and `recall` writes `lmstudio_recall`. These profile outputs
-share the same `document_regions` contract and can be compared in the viewer;
-default fusion still uses the canonical balanced LM Studio output so alternate
-profiles do not overweight one backend family.
-For image inputs, LM Studio can also run an orientation preflight before the box
-pass. The preflight uses a smaller rendered image and strict JSON schema to
-decide the clockwise rotation needed to make text upright; accepted decisions
-are logged and persisted before region prompts are rendered.
+Infinity Parser2 can run through its Python package or through LM Studio:
 
-Region fusion is enabled by default through `--fuse-regions`. It clusters
-overlapping Docling, MinerU, and LM Studio boxes by page and region kind, keeps
-single-engine regions when the other engines are missing, and stores the
-combined balanced overlay as `annotation_engine='fusion'`. Source region IDs and
-per-engine contribution flags are kept in metadata so the fused box can be
-audited against the original engine outputs.
-The raw fused output also includes `agreement_summary`, with per-engine source
-counts, single-engine-only region counts, multi-engine agreement counts, and
-support-combination counts such as `docling+mineru+lmstudio`.
-Use `--fusion-profiles conservative,balanced,recall` or `--fusion-profiles all`
-to store alternative overlays as `fusion_conservative`, `fusion`, and
-`fusion_recall` for side-by-side comparison.
+```sh
+uv run trapo ingest ./documents --db trapo.duckdb \
+  --annotation-engines infinity \
+  --page-markdown-engines infinity_markdown \
+  --infinity-backend lmstudio \
+  --infinity-model infinity-parser2-flash
+```
+
+When `--infinity-backend lmstudio` is selected, Trapo uses LM Studio's native
+model API to load `infinity-parser2-flash` at the allowlisted maximum context
+before calling the OpenAI-compatible chat endpoint. The default local endpoint
+is `http://localhost:1234/v1`, `--lmstudio-timeout` controls non-streamed read
+timeout, and failures are recorded against the Infinity work unit while any
+successful Docling or MinerU output from the same run is kept.
+
 Run `uv run trapo annotation-report <file-hash> --db trapo.duckdb` to compare
-stored engine/profile status, region counts, page counts, profile names,
-elapsed LM Studio page time, and fusion agreement for one document.
+stored engine status, region counts, page counts, and reader metadata for one
+document.
 
 Docling GPU acceleration is controlled with
 `--docling-device auto|cpu|cuda|cuda:N|mps|xpu` (default `auto`, which picks the
@@ -254,8 +214,9 @@ uv run trapo serve --src ./documents --db trapo.duckdb --host 127.0.0.1 --port 8
 The web UI is a VS Code-style document explorer: a file tree, a virtualized
 PDF/image preview with selectable region overlays, a focused per-page Markdown
 pane, a details pane for the selected region, annotation provider grouping for
-Docling, MinerU, LM Studio, and fused regions, hide/show switches for engines
-and individual overlays, a settings page for provider/kind colors, and a
+Docling, MinerU, and Infinity, hide/show switches for engines
+and individual overlays, tabbed ingest diagnostics for Progress, Performance,
+Models, and Waterfall views, a settings page for provider/kind colors, and a
 `Ctrl+K` command center for searching documents and navigating to a specific
 file, page, or region. Preview zoom and 90-degree rotation controls are stored
 in the URL (`zoom`, `rotation`) and transform the cached page image and overlay
@@ -318,8 +279,8 @@ running the full FastAPI server or exposing local corpus data. Stories live unde
   tabs, status bar, inspectors, and dense table.
 - `Features/Documents` covers document top bar, preview toolbar, and overlay
   details.
-- `Features/Diagnostics` covers the pipeline flamegraph/waterfall and failure
-  detail panes.
+- `Features/Diagnostics` covers Progress, Performance, Models, Waterfall, and
+  failure detail panes.
 
 Run Storybook:
 
@@ -395,7 +356,7 @@ does not publish build artifacts or deploy anything.
 - [docs/schema.md](docs/schema.md) — DuckDB schema for ingest and search.
 - [docs/migrations.md](docs/migrations.md) — migration framework and baseline.
 - [docs/otel.md](docs/otel.md) — OpenTelemetry configuration.
-- [docs/lmstudio-engine.md](docs/lmstudio-engine.md) — LM Studio third-engine design.
+- [docs/lmstudio-engine.md](docs/lmstudio-engine.md) — LM Studio backend for Infinity Parser2.
 - [docs/storybook.md](docs/storybook.md) — component-first UI development with anonymized fixtures.
 - [docs/skylos.md](docs/skylos.md) — dead-code, security, secrets, quality, and SCA checks.
-- [INGEST.md](INGEST.md) — Docling/MinerU/LM Studio input and storage notes.
+- [INGEST.md](INGEST.md) — Docling, MinerU, and Infinity input and storage notes.

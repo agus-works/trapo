@@ -16,7 +16,6 @@ CATEGORY_KEYWORDS: tuple[tuple[tuple[str, ...], str], ...] = (
     (("docling",), "docling"),
     (("mineru",), "mineru"),
     (("preview",), "preview"),
-    (("fuse", "fusion"), "fusion"),
     (("region",), "regions"),
 )
 

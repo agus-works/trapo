@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from trapo.document_markdown import (
     INFINITY_MARKDOWN_ENGINE,
-    LMSTUDIO_MARKDOWN_ENGINE,
     MARKITDOWN_CU_MARKDOWN_ENGINE,
     MARKITDOWN_MARKDOWN_ENGINE,
 )
@@ -23,12 +22,11 @@ def requested_markdown_engines(options: IngestOptions) -> list[str]:
             continue
         if normalized and normalized not in engines:
             engines.append(normalized)
-    return engines or [LMSTUDIO_MARKDOWN_ENGINE, MARKITDOWN_MARKDOWN_ENGINE]
+    return engines or [INFINITY_MARKDOWN_ENGINE, MARKITDOWN_MARKDOWN_ENGINE]
 
 
 def _append_all_markdown_engines(engines: list[str]) -> None:
     for engine in (
-        LMSTUDIO_MARKDOWN_ENGINE,
         INFINITY_MARKDOWN_ENGINE,
         MARKITDOWN_MARKDOWN_ENGINE,
         MARKITDOWN_CU_MARKDOWN_ENGINE,
@@ -39,10 +37,6 @@ def _append_all_markdown_engines(engines: list[str]) -> None:
 
 def _normalize_markdown_engine(value: str) -> str:
     aliases = {
-        "lmstudio": LMSTUDIO_MARKDOWN_ENGINE,
-        "lm-studio": LMSTUDIO_MARKDOWN_ENGINE,
-        "local-lmstudio": LMSTUDIO_MARKDOWN_ENGINE,
-        LMSTUDIO_MARKDOWN_ENGINE: LMSTUDIO_MARKDOWN_ENGINE,
         "infinity": INFINITY_MARKDOWN_ENGINE,
         "infinity-parser2": INFINITY_MARKDOWN_ENGINE,
         "local-infinity": INFINITY_MARKDOWN_ENGINE,

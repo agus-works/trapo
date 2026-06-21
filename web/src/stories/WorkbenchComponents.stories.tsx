@@ -72,6 +72,7 @@ function WorkbenchNavigationShowcase() {
         <section className="storybookSurface storybookStack">
           <WorkbenchTabs
             active={activeTab}
+            ariaLabel="Workbench sample tabs"
             onChange={setActiveTab}
             storageKey="storybook-tabs"
             tabs={workbenchTabs}
@@ -125,7 +126,7 @@ function WorkbenchDataShowcase() {
             empty="No region selected."
             sections={[
               {
-                content: <KeyValueBlock value={{ engine: 'fusion', page: 2, status: 'ok' }} />,
+                content: <KeyValueBlock value={{ engine: 'infinity', page: 2, status: 'ok' }} />,
                 id: 'metadata',
                 title: 'Metadata',
               },

@@ -15,7 +15,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 from starlette.types import Scope
 
+from trapo.annotation_engines import ACTIVE_REGION_ENGINE_SQL_LIST
 from trapo.annotation.docling.regions import persisted_region_overlays
+from trapo.annotation.infinity.regions import extract_infinity_pages
 from trapo.annotation.mineru.regions import extract_mineru_pages
 from trapo.annotation_settings import (
     read_annotation_settings,
@@ -37,7 +39,6 @@ from trapo.document_markdown import (
     read_document_markdown,
     read_document_markdown_engines,
 )
-from trapo.lmstudio_pages import extract_lmstudio_pages
 from trapo.observability import instrument_fastapi_app
 from trapo.page_orientation import read_page_rotation_degrees
 from trapo.preview_cache import read_document_preview_images
@@ -49,8 +50,18 @@ from trapo.search import (
     search_commands,
     search_global,
 )
+from trapo.server.diagnostic_analytics import (
+    diagnostic_analytics,
+    diagnostic_models,
+)
+from trapo.server.diagnostic_analytics_models import (
+    DiagnosticAnalyticsPayload,
+    DiagnosticModelsPayload,
+)
+from trapo.server.diagnostic_progress import diagnostic_progress
 from trapo.server.diagnostics import diagnostic_runs, diagnostic_trace
 from trapo.server.diagnostic_models import (
+    DiagnosticProgressPayload,
     DiagnosticRunRecord,
     DiagnosticTracePayload,
 )
@@ -193,6 +204,32 @@ def create_app(
                 q=params.q,
                 limit=params.limit,
             )
+
+    @app.get("/api/diagnostics/progress", response_model=DiagnosticProgressPayload)
+    def diagnostics_progress(
+        ingest_run_id: int | None = None,
+        limit: int = 10000,
+        con: DuckConnection = Depends(connection),
+    ) -> DiagnosticProgressPayload:
+        with db_lock:
+            return diagnostic_progress(con, ingest_run_id=ingest_run_id, limit=limit)
+
+    @app.get("/api/diagnostics/analytics", response_model=DiagnosticAnalyticsPayload)
+    def diagnostics_analytics(
+        ingest_run_id: int | None = None,
+        limit: int = 50,
+        con: DuckConnection = Depends(connection),
+    ) -> DiagnosticAnalyticsPayload:
+        with db_lock:
+            return diagnostic_analytics(con, ingest_run_id=ingest_run_id, limit=limit)
+
+    @app.get("/api/diagnostics/models", response_model=DiagnosticModelsPayload)
+    def diagnostics_models(
+        ingest_run_id: int | None = None,
+        con: DuckConnection = Depends(connection),
+    ) -> DiagnosticModelsPayload:
+        with db_lock:
+            return diagnostic_models(con, ingest_run_id=ingest_run_id)
 
     @app.get("/api/documents", response_model=list[DocumentSummary])
     def documents(con: DuckConnection = Depends(connection)) -> list[DocumentSummary]:
@@ -390,7 +427,7 @@ def _search_highlight_response(highlight: SearchHighlight) -> SearchHighlightRec
 
 def _document_summaries(con: DuckConnection) -> list[DocumentSummary]:
     rows = con.execute(
-        """
+        f"""
         SELECT
             f.file_hash,
             f.filename,
@@ -414,37 +451,24 @@ def _document_summaries(con: DuckConnection) -> list[DocumentSummary]:
                   AND od.annotation_engine = 'mineru'
             ) AS mineru_error,
             (
-                SELECT od.status
-                FROM ocr_documents od
-                WHERE od.file_hash = f.file_hash
-                  AND (od.annotation_engine = 'lmstudio' OR od.annotation_engine LIKE 'lmstudio_%')
-                ORDER BY CASE WHEN od.annotation_engine = 'lmstudio' THEN 0 ELSE 1 END,
-                         od.annotation_engine
-                LIMIT 1
-            ) AS lmstudio_status,
-            (
-                SELECT od.error
-                FROM ocr_documents od
-                WHERE od.file_hash = f.file_hash
-                  AND (od.annotation_engine = 'lmstudio' OR od.annotation_engine LIKE 'lmstudio_%')
-                ORDER BY CASE WHEN od.annotation_engine = 'lmstudio' THEN 0 ELSE 1 END,
-                         od.annotation_engine
-                LIMIT 1
-            ) AS lmstudio_error,
-            (
                 SELECT any_value(od.status)
                 FROM ocr_documents od
                 WHERE od.file_hash = f.file_hash
-                  AND od.annotation_engine = 'fusion'
-            ) AS fusion_status,
+                  AND od.annotation_engine = 'infinity'
+            ) AS infinity_status,
             (
                 SELECT any_value(od.error)
                 FROM ocr_documents od
                 WHERE od.file_hash = f.file_hash
-                  AND od.annotation_engine = 'fusion'
-            ) AS fusion_error,
+                  AND od.annotation_engine = 'infinity'
+            ) AS infinity_error,
             (SELECT count(*) FROM document_chunks c WHERE c.file_hash = f.file_hash) AS chunk_count,
-            (SELECT count(*) FROM document_regions r WHERE r.file_hash = f.file_hash) AS region_count
+            (
+                SELECT count(*)
+                FROM document_regions r
+                WHERE r.file_hash = f.file_hash
+                  AND coalesce(r.annotation_engine, 'docling') IN ({ACTIVE_REGION_ENGINE_SQL_LIST})
+            ) AS region_count
         FROM files f
         LEFT JOIN file_locations l ON l.file_hash = f.file_hash
         LEFT JOIN docling_documents d ON d.file_hash = f.file_hash
@@ -468,12 +492,10 @@ def _summary_from_row(row: tuple[object, ...]) -> DocumentSummary:
         docling_error=str(row[8]) if row[8] is not None else None,
         mineru_status=str(row[9]) if row[9] is not None else None,
         mineru_error=str(row[10]) if row[10] is not None else None,
-        lmstudio_status=str(row[11]) if row[11] is not None else None,
-        lmstudio_error=str(row[12]) if row[12] is not None else None,
-        fusion_status=str(row[13]) if row[13] is not None else None,
-        fusion_error=str(row[14]) if row[14] is not None else None,
-        chunk_count=_int_value(row[15]),
-        region_count=_int_value(row[16]),
+        infinity_status=str(row[11]) if row[11] is not None else None,
+        infinity_error=str(row[12]) if row[12] is not None else None,
+        chunk_count=_int_value(row[13]),
+        region_count=_int_value(row[14]),
     )
 
 
@@ -504,20 +526,15 @@ def _document_detail(con: DuckConnection, file_hash: str) -> DocumentDetail:
         ).fetchone()
         pages = extract_mineru_pages(mineru_json[0] if mineru_json else None)
     if not pages and table_exists(con, "ocr_documents"):
-        lmstudio_json = con.execute(
+        infinity_json = con.execute(
             """
             SELECT output_json
             FROM ocr_documents
-            WHERE file_hash = ?
-              AND (annotation_engine = 'lmstudio' OR annotation_engine LIKE 'lmstudio_%')
-              AND status = 'ok'
-            ORDER BY CASE WHEN annotation_engine = 'lmstudio' THEN 0 ELSE 1 END,
-                     annotation_engine
-            LIMIT 1
+            WHERE file_hash = ? AND annotation_engine = 'infinity' AND status = 'ok'
             """,
             [file_hash],
         ).fetchone()
-        pages = extract_lmstudio_pages(lmstudio_json[0] if lmstudio_json else None)
+        pages = extract_infinity_pages(infinity_json[0] if infinity_json else None)
     if not pages:
         pages = _preview_cache_pages(con, file_hash)
     return DocumentDetail(**summary.model_dump(), pages=pages)

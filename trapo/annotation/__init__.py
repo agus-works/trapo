@@ -1,3 +1,3 @@
 from __future__ import annotations
 
-__all__ = ["docling", "fusion", "lmstudio", "mineru"]
+__all__ = ["docling", "infinity", "mineru"]
